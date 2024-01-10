@@ -8,14 +8,11 @@ from random import random
 
 
 def read_jsonl_files(directory):
-    file_dict = {}  # 用于存储文件内容的字典
-    
-    # 检查目录是否存在
+    file_dict = {}
     if not os.path.exists(directory):
         print(f"目录 '{directory}' 不存在")
         return file_dict
     
-    # 获取目录下的所有文件
     files = os.listdir(directory)
     
     # 遍历文件列表

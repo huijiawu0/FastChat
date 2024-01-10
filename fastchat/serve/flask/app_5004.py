@@ -186,15 +186,70 @@ def get_leaderboard_detail():
     return json.dumps(result, ensure_ascii=False)
 
 
-@app.route('/judge', methods=['POST'])
-def judge():
+def calculate_score(result_dict):
+    score_result = {}
+    for model, model_result in result_dict.items():
+        category_status = defaultdict(list)
+        for answer in model_result:
+            category = answer["category"].split('|||')[0]
+            pred = answer["choices"][0]["turns"][0].split('')[0]
+            pred_counts = {option: pred.count(option) for option in ['A', 'B', 'C', 'D']}
+            refer_counts = {option: answer["reference_answer"].count(option) for option in ['A', 'B', 'C', 'D']}
+            status = all(pred_counts[option] == refer_counts[option] for option in ['A', 'B', 'C', 'D'])
+            category_status[category].append(status)
+        
+        category_score = {k: (sum(v) / len(v), sum(v), len(v)) for k, v in category_status.items()}
+        total_correct = sum(v[1] for v in category_score.values())
+        total_questions = sum(v[2] for v in category_score.values())
+        score_result[model] = (
+        total_correct, total_questions, total_correct / total_questions if total_questions else 0)
+    
+    return score_result
+
+
+def get_total_scores(model_scores):
+    total_scores = {}
+    for model, scores in model_scores.items():
+        total_scores[model] = sum(scores.values())
+    return total_scores
+
+
+@app.route('/get_report', methods=['POST'])
+def get_report():
     data = request.json
-    # Validate input data
-    if not all(key in data for key in ['data_id']):
+    data_ids = data.get('data_ids')
+    model_ids = data.get('model_ids')
+    
+    if not data_ids or not model_ids:
         return jsonify({"error": "Missing required fields in the request"}), 400
     
+    base_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    all_model_scores = defaultdict(lambda: defaultdict(int))
+    for data_id in data_ids:
+        directory_path = os.path.join(base_path, "llm_judge", "data", data_id, "model_answer")
+        result_dict = read_jsonl_files(directory_path)
+        model_scores = calculate_model_scores(result_dict)
+        for model_id in model_ids:
+            all_model_scores[model_id][data_id] = model_scores[model_id][data_id]
+
+    total_scores = get_total_scores(all_model_scores)
+    header = ['Model ID', 'Total Score'] + data_ids
+    score_table = [header]
+    for model_id in model_ids:
+        row = [model_id, total_scores[model_id]] + [all_model_scores[model_id][data_id] for data_id in data_ids]
+        score_table.append(row)
+
+    return jsonify({"score_table": score_table})
+
+
+@app.route('/report_model_data', methods=['POST'])
+def report_model_data():
+    data = request.json
+    # Validate input data
+    if not all(key in data for key in ['data_id', 'model_id']):
+        return jsonify({"error": "Missing required fields in the request"}), 400
     DATA_ID = data.get('data_id')
-    
+    MODEL_ID = data.get('model_id')
     directory_path = "/home/workspace/FastChat/fastchat/llm_judge/data/" + DATA_ID + "/model_answer"
     result_dict = read_jsonl_files(directory_path)
     score_result = {}
@@ -225,6 +280,7 @@ def judge():
         end_time = get_end_time()
         result = {"output": score_result,
                   "data_id": DATA_ID,
+                  "model_id": MODEL_ID,
                   "time_start": start_time,
                   "time_end": end_time}
         return jsonify(result)
@@ -258,7 +314,8 @@ def run_evaluate():
         for data_id in data_ids:
             question_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "question.jsonl")
             for model_name, model_id in zip(model_names, model_ids):
-                output_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "model_answer", f"{model_id}.jsonl")
+                output_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "model_answer",
+                                           f"{model_id}.jsonl")
                 run_eval(
                     model_path=model_name,
                     model_id=model_id,
@@ -275,7 +332,8 @@ def run_evaluate():
                     revision=revision,
                     cache_dir=cache_dir
                 )
-                outputs.append({"data_id": data_id, "model_id": model_id, "model_name": model_name, "output": output_file})
+                outputs.append(
+                    {"data_id": data_id, "model_id": model_id, "model_name": model_name, "output": output_file})
         end_time = get_end_time()
         result = {"outputs": outputs,
                   "model_names": model_names,
@@ -288,8 +346,6 @@ def run_evaluate():
         return jsonify(result)
     except subprocess.CalledProcessError:
         return jsonify({"error": "Script execution failed"}), 500
-    
-
 
 
 if __name__ == "__main__":
