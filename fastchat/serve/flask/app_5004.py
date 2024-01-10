@@ -219,7 +219,8 @@ def get_report():
     data = request.json
     data_ids = data.get('data_ids')
     model_ids = data.get('model_ids')
-    
+    print(data_ids, model_ids)
+
     if not data_ids or not model_ids:
         return jsonify({"error": "Missing required fields in the request"}), 400
     
@@ -229,7 +230,7 @@ def get_report():
         directory_path = os.path.join(base_path, "llm_judge", "data", data_id, "model_answer")
         result_dict = read_jsonl_files(directory_path)
         model_scores = calculate_model_scores(result_dict)
-        print(result_dict, model_scores)
+        print(list(result_dict.keys()), model_scores)
         for model_id in model_ids:
             all_model_scores[model_id][data_id] = model_scores[model_id][data_id]
 
@@ -241,52 +242,6 @@ def get_report():
         score_table.append(row)
 
     return jsonify({"score_table": score_table})
-
-
-@app.route('/report_model_data', methods=['POST'])
-def report_model_data():
-    data = request.json
-    # Validate input data
-    if not all(key in data for key in ['data_id', 'model_id']):
-        return jsonify({"error": "Missing required fields in the request"}), 400
-    DATA_ID = data.get('data_id')
-    MODEL_ID = data.get('model_id')
-    directory_path = "/home/workspace/FastChat/fastchat/llm_judge/data/" + DATA_ID + "/model_answer"
-    result_dict = read_jsonl_files(directory_path)
-    score_result = {}
-    for model in result_dict:
-        dd0 = defaultdict(list)
-        dd1 = {}
-        model_result = result_dict[model]
-        for answer in model_result:
-            category = answer["category"].split('|||')[0]
-            pred = answer["choices"][0]["turns"][0].split('<|im_end|>')[0]
-            pred_counts = {option: pred.count(option) for option in ['A', 'B', 'C', 'D']}
-            refer_counts = {option: answer["reference_answer"].count(option) for option in ['A', 'B', 'C', 'D']}
-            if all([pred_counts[option] == refer_counts[option] for option in ['A', 'B', 'C', 'D']]):
-                status = True
-            else:
-                status = False
-            dd0[category].append(status)
-        for k, v in dd0.items():
-            dd1[k] = (sum(v) / len(v), sum(v), len(v))
-        
-        print(model, dd1)
-        s0 = sum([v[1] for v in dd1.values()])
-        s1 = sum([v[2] for v in dd1.values()])
-        score_result.update({model: (s0, s1, s0 / s1)})
-    
-    try:
-        start_time = get_start_time()
-        end_time = get_end_time()
-        result = {"output": score_result,
-                  "data_id": DATA_ID,
-                  "model_id": MODEL_ID,
-                  "time_start": start_time,
-                  "time_end": end_time}
-        return jsonify(result)
-    except subprocess.CalledProcessError:
-        return jsonify({"error": "Script execution failed"}), 500
 
 
 @app.route('/run_evaluate', methods=['POST'])
