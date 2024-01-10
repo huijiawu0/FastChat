@@ -229,6 +229,7 @@ def get_report():
         directory_path = os.path.join(base_path, "llm_judge", "data", data_id, "model_answer")
         result_dict = read_jsonl_files(directory_path)
         model_scores = calculate_model_scores(result_dict)
+        print(result_dict, model_scores)
         for model_id in model_ids:
             all_model_scores[model_id][data_id] = model_scores[model_id][data_id]
 
