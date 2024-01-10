@@ -36,7 +36,6 @@ def calculate_model_scores(data_id_list):
 
     for data_id in data_id_list:
         answers_directory_path = os.path.join(app_dir, "llm_judge", "data", str(data_id), "model_answer")
-        print(answers_directory_path)
         model_answers = read_jsonl_files(answers_directory_path)
         
         for model, answers in model_answers.items():

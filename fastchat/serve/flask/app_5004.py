@@ -224,24 +224,24 @@ def get_report():
     if not data_ids or not model_ids:
         return jsonify({"error": "Missing required fields in the request"}), 400
     
-    base_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    all_model_scores = defaultdict(lambda: defaultdict(int))
-    for data_id in data_ids:
-        directory_path = os.path.join(base_path, "llm_judge", "data", data_id, "model_answer")
-        result_dict = read_jsonl_files(directory_path)
-        model_scores = calculate_model_scores(result_dict)
-        print(list(result_dict.keys()), model_scores)
-        for model_id in model_ids:
-            all_model_scores[model_id][data_id] = model_scores[model_id][data_id]
-
-    total_scores = get_total_scores(all_model_scores)
+    report = calculate_model_scores(data_ids)
+    
     header = ['Model ID', 'Total Score'] + data_ids
-    score_table = [header]
-    for model_id in model_ids:
-        row = [model_id, total_scores[model_id]] + [all_model_scores[model_id][data_id] for data_id in data_ids]
-        score_table.append(row)
+    leaderboard = [header]
+    for model, model_data in report.items():
+        row = [model]
+        total_correct = model_data['total_correct']
+        total_questions = model_data['total_questions']
+        total_score = total_correct / total_questions if total_questions > 0 else 0
+        row.append(total_score)
+        for data_id in data_ids:
+            score_per_category = model_data['score_per_category'].get(data_id, {"correct": 0, "total": 0})
+            category_score = score_per_category['correct'] / score_per_category['total'] if score_per_category[
+                                                                                                'total'] > 0 else 0
+            row.append(category_score)
+        leaderboard.append(row)
 
-    return jsonify({"score_table": score_table})
+    return jsonify({"leaderboard": leaderboard})
 
 
 @app.route('/run_evaluate', methods=['POST'])
