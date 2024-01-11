@@ -87,12 +87,12 @@
           "subjects": ["职业诚信", "企业社会责任", "职业伦理"]
         },
         {
-          "name": "艺术与文化伦理数据集",
-          "data_id": "arts_culture_ethics_dataset",
-          "category": "艺术与文化伦理",
-          "description": "探讨艺术创作自由、文化遗产保护、审美伦理等问题，评估模型在艺术和文化领域的伦理理解。",
+          "name": "艺术伦理数据集",
+          "data_id": "arts_ethics_dataset",
+          "category": "艺术伦理",
+          "description": "探究艺术创作自由、审美标准、以及艺术与社会责任之间的关系，目的在于深化对艺术领域伦理问题的理解。",
           "record_count": 2000,
-          "subjects": ["艺术自由", "文化保护", "审美伦理"]
+          "subjects": ["艺术自由", "艺术与社会责任", "审美伦理"]
         },
         {
           "name": "网络与信息伦理数据集",

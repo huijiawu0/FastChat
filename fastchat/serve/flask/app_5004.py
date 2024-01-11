@@ -61,21 +61,33 @@ def get_modelpage_detail():
         return jsonify({"error": "Missing required fields in the request"}), 400
     
     MODEL_ID = data.get('model_id')
-    overall_report = calculate_model_scores(["moral_bench_test1"])
+    DATA_IDS = list(DATA_DICT.keys())
+    DATA_IDS.extend(["moral_bench_test1", "moral_bench_test2"])
+    print("model_id:", MODEL_ID, "data_ids:", DATA_IDS)
+    overall_report = calculate_model_scores(DATA_IDS)
+    print("overall_report:", overall_report)
     # sys_prompt = get_system_prompt()
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
+
     ability_scores = overall_report[MODEL_ID]["score_per_category"]
     ability_scores_array = []
-    for model, scores in ability_scores.items():
-        model_scores = {"model": model}
-        model_scores.update(scores)
-        ability_scores_array.append(model_scores)
+    for ability, scores in ability_scores.items():
+        ability_scores_array.append({"ability": ability, **scores})
+
+    scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
+    data_id_scores = []
+    for data_id, scores in scores_per_data_id.items():
+        data_id_scores.append(
+            {"data_id": data_id, "score": scores["correct"], "total": scores["total"], "accuracy": scores["accuracy"]})
     result = {
-        "request_id": request_id,
+        "request_id": str(request_id),
         "model_id": MODEL_ID,
         "score": overall_report[MODEL_ID]["score_total"],
+        "correct": overall_report[MODEL_ID]["total_correct"],
+        "total": overall_report[MODEL_ID]["total_questions"],
         "ability_scores": ability_scores_array,
+        "data_id_scores": data_id_scores,
         "model_description": MODEL_DICT.get(MODEL_ID, {}),
         "report": report
     }
@@ -120,66 +132,36 @@ def get_leaderboard_detail():
             "类型",
             "参数量",
             "综合",
-            "政治伦理",
-            "经济伦理",
-            "社会伦理",
-            "文化伦理",
-            "科技伦理",
-            "环境伦理",
-            "医疗健康伦理",
-            "教育伦理",
-            "职业道德",
-            "艺术与文化伦理",
-            "网络与信息伦理",
-            "国际关系与全球伦理",
-            "心理伦理",
-            "生物伦理",
-            "运动伦理"
+            "合规性",
+            "公平性",
+            "知识产权",
+            "隐私保护",
+            "可信度"
         ],
         "data": [
             {
                 "模型": "ChatGLM2",
                 "发布日期": "2023-01-01",
                 "类型": "大语言模型",
-                "参数量": 175000000,
+                "参数量": "6B",
                 "综合": 85.25,
-                "政治伦理": 92.00,
-                "经济伦理": 87.75,
-                "社会伦理": 88.50,
-                "文化伦理": 84.25,
-                "科技伦理": 89.00,
-                "环境伦理": 86.50,
-                "医疗健康伦理": 90.00,
-                "教育伦理": 85.75,
-                "职业道德": 88.25,
-                "艺术与文化伦理": 82.75,
-                "网络与信息伦理": 87.50,
-                "国际关系与全球伦理": 89.25,
-                "心理伦理": 91.00,
-                "生物伦理": 88.75,
-                "运动伦理": 84.00
+                "合规性": 92.00,
+                "公平性": 87.75,
+                "知识产权": 88.50,
+                "隐私保护": 84.25,
+                "可信度": 89.00
             },
             {
-                "模型": "示例模型2",
+                "模型": "ChatGLM3",
                 "发布日期": "2023-02-15",
-                "类型": "示例类型",
-                "参数量": 1000000,
+                "类型": "大语言模型",
+                "参数量": "7B",
                 "综合": 78.50,
-                "政治伦理": 80.00,
-                "经济伦理": 75.25,
-                "社会伦理": 82.75,
-                "文化伦理": 79.25,
-                "科技伦理": 77.00,
-                "环境伦理": 80.50,
-                "医疗健康伦理": 85.00,
-                "教育伦理": 76.25,
-                "职业道德": 81.00,
-                "艺术与文化伦理": 77.75,
-                "网络与信息伦理": 79.00,
-                "国际关系与全球伦理": 83.25,
-                "心理伦理": 80.00,
-                "生物伦理": 76.75,
-                "运动伦理": 78.50
+                "合规性": 80.00,
+                "公平性": 75.25,
+                "知识产权": 82.75,
+                "隐私保护": 79.25,
+                "可信度": 77.00
             }
         ]
     }
@@ -216,6 +198,7 @@ def get_total_scores(model_scores):
 
 @app.route('/get_report', methods=['POST'])
 def get_report():
+    request_id = random_uuid()
     data = request.json
     data_ids = data.get('data_ids')
     model_ids = data.get('model_ids')
@@ -226,7 +209,7 @@ def get_report():
     
     report = calculate_model_scores(data_ids)
     
-    header = ['Model ID', 'Total Score'] + data_ids
+    header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
     leaderboard = [header]
     for model, model_data in report.items():
         row = [model]
@@ -235,13 +218,16 @@ def get_report():
         total_score = total_correct / total_questions if total_questions > 0 else 0
         row.append(total_score)
         for data_id in data_ids:
-            score_per_category = model_data['score_per_category'].get(data_id, {"correct": 0, "total": 0})
-            category_score = score_per_category['correct'] / score_per_category['total'] if score_per_category[
-                                                                                                'total'] > 0 else 0
+            score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
+            category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
+                if score_per_data_id['total'] > 0 else 0
             row.append(category_score)
+        report = get_cache()
+        row.append(get_end_time())
+        row.append(report)
         leaderboard.append(row)
 
-    return jsonify({"leaderboard": leaderboard})
+    return json.dumps({"request_id":request_id, "leaderboard": leaderboard}, ensure_ascii=False)
 
 
 @app.route('/run_evaluate', methods=['POST'])

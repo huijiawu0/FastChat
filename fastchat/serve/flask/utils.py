@@ -33,15 +33,20 @@ def calculate_model_scores(data_id_list):
     overall_report = {}
     error_results = []
     app_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
+    
     for data_id in data_id_list:
         answers_directory_path = os.path.join(app_dir, "llm_judge", "data", str(data_id), "model_answer")
-        model_answers = read_jsonl_files(answers_directory_path)
-        
+        if not os.path.exists(answers_directory_path):
+            print(f"No model answers found for data_id: {data_id}. Skipping.")
+            continue
+        else:
+            model_answers = read_jsonl_files(answers_directory_path)
+
         for model, answers in model_answers.items():
             if model not in overall_report:
                 overall_report[model] = {"total_correct": 0, "total_questions": 0,
-                                         "score_per_category": defaultdict(lambda: {"correct": 0, "total": 0})}
+                                         "score_per_category": defaultdict(lambda: {"correct": 0, "total": 0}),
+                                         "scores_per_data_id": defaultdict(lambda: {"correct": 0, "total": 0})}
             
             for answer in answers:
                 if len(answer["reference_answer"]) > 1:
@@ -63,6 +68,8 @@ def calculate_model_scores(data_id_list):
                 
                 overall_report[model]["score_per_category"][category]["correct"] += is_correct
                 overall_report[model]["score_per_category"][category]["total"] += 1
+                overall_report[model]["scores_per_data_id"][data_id]["correct"] += is_correct
+                overall_report[model]["scores_per_data_id"][data_id]["total"] += 1
                 overall_report[model]["total_correct"] += is_correct
                 overall_report[model]["total_questions"] += 1
     
@@ -72,10 +79,17 @@ def calculate_model_scores(data_id_list):
             data["score_per_category"][category] = {
                 "correct": scores["correct"],
                 "total": scores["total"],
-                "accuracy": scores["correct"] / scores["total"]
+                "accuracy": scores["correct"] / scores["total"] if scores["total"] > 0 else 0
             }
         
-        data["score_total"] = data["total_correct"] / data["total_questions"]
+        for data_id, scores in data["scores_per_data_id"].items():
+            data["scores_per_data_id"][data_id] = {
+                "correct": scores["correct"],
+                "total": scores["total"],
+                "accuracy": scores["correct"] / scores["total"] if scores["total"] > 0 else 0
+            }
+        
+        data["score_total"] = data["total_correct"] / data["total_questions"] if data["total_questions"] > 0 else 0
         data["error_examples"] = error_results[:3]
     
     return overall_report
