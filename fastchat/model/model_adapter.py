@@ -12,7 +12,6 @@ if sys.version_info >= (3, 9):
 else:
     from functools import lru_cache as cache
 
-import accelerate
 import psutil
 import torch
 from transformers import (
@@ -53,7 +52,10 @@ peft_share_base_weights = (
 ANTHROPIC_MODEL_LIST = (
     "claude-1",
     "claude-2",
+    "claude-2.0",
+    "claude-2.1",
     "claude-instant-1",
+    "claude-instant-1.2",
 )
 
 
@@ -177,6 +179,8 @@ def load_model(
     debug: bool = False,
 ):
     """Load a model from Hugging Face."""
+    import accelerate
+
     # get model adapter
     adapter = get_model_adapter(model_path)
 
@@ -212,8 +216,16 @@ def load_model(
                 kwargs["max_memory"] = {i: max_gpu_memory for i in range(num_gpus)}
     elif device == "mps":
         kwargs = {"torch_dtype": torch.float16}
-        # Avoid bugs in mps backend by not using in-place operations.
-        replace_llama_attn_with_non_inplace_operations()
+        import transformers
+
+        version = tuple(int(v) for v in transformers.__version__.split("."))
+        if version < (4, 35, 0):
+            # NOTE: Recent transformers library seems to fix the mps issue, also
+            # it has made some changes causing compatibility issues with our
+            # original patch. So we only apply the patch for older versions.
+
+            # Avoid bugs in mps backend by not using in-place operations.
+            replace_llama_attn_with_non_inplace_operations()
     elif device == "xpu":
         kwargs = {"torch_dtype": torch.bfloat16}
         # Try to load ipex, while it looks unused, it links into torch for xpu support
@@ -308,6 +320,19 @@ def load_model(
     if dtype is not None:  # Overwrite dtype if it is provided in the arguments.
         kwargs["torch_dtype"] = dtype
 
+    if os.environ.get("FASTCHAT_USE_MODELSCOPE", "False").lower() == "true":
+        # download model from ModelScope hub,
+        # lazy import so that modelscope is not required for normal use.
+        try:
+            from modelscope.hub.snapshot_download import snapshot_download
+
+            model_path = snapshot_download(model_id=model_path, revision=revision)
+        except ImportError as e:
+            warnings.warn(
+                "Use model from www.modelscope.cn need pip install modelscope"
+            )
+            raise e
+
     # Load model
     model, tokenizer = adapter.load_model(model_path, kwargs)
 
@@ -345,10 +370,10 @@ def get_generate_stream_function(model: torch.nn.Module, model_path: str):
     from fastchat.serve.inference import generate_stream
 
     model_type = str(type(model)).lower()
+    is_peft = "peft" in model_type
     is_chatglm = "chatglm" in model_type
     is_falcon = "rwforcausallm" in model_type
     is_codet5p = "codet5p" in model_type
-    is_peft = "peft" in model_type
     is_exllama = "exllama" in model_type
     is_xft = "xft" in model_type
 
@@ -378,7 +403,24 @@ def get_generate_stream_function(model: torch.nn.Module, model_path: str):
             judge_sent_end: bool = False,
         ):
             model.set_adapter(model_path)
-            for x in generate_stream(
+            base_model_type = str(type(model.base_model.model))
+            is_chatglm = "chatglm" in base_model_type
+            is_falcon = "rwforcausallm" in base_model_type
+            is_codet5p = "codet5p" in base_model_type
+            is_exllama = "exllama" in base_model_type
+            is_xft = "xft" in base_model_type
+            generate_stream_function = generate_stream
+            if is_chatglm:
+                generate_stream_function = generate_stream_chatglm
+            elif is_falcon:
+                generate_stream_function = generate_stream_falcon
+            elif is_codet5p:
+                generate_stream_function = generate_stream_codet5p
+            elif is_exllama:
+                generate_stream_function = generate_stream_exllama
+            elif is_xft:
+                generate_stream_function = generate_stream_xft
+            for x in generate_stream_function(
                 model,
                 tokenizer,
                 params,
@@ -500,6 +542,11 @@ def add_model_args(parser):
         type=str,
         default=None,
         help="Used for exllamabv2. Comma-separated list of VRAM (in GB) to use per GPU. Example: 20,7,7",
+    )
+    parser.add_argument(
+        "--exllama-cache-8bit",
+        action="store_true",
+        help="Used for exllamabv2. Use 8-bit cache to save VRAM.",
     )
     parser.add_argument(
         "--enable-xft",
@@ -859,7 +906,11 @@ class OpenChat35Adapter(BaseModelAdapter):
     """The model adapter for OpenChat 3.5 (e.g. openchat/openchat_3.5)"""
 
     def match(self, model_path: str):
-        return "openchat" in model_path.lower() and "3.5" in model_path.lower()
+        if "openchat" in model_path.lower() and "3.5" in model_path.lower():
+            return True
+        elif "starling-lm" in model_path.lower():
+            return True
+        return False
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
         return get_conv_template("openchat_3.5")
@@ -1004,8 +1055,12 @@ class ChatGPTAdapter(BaseModelAdapter):
     def match(self, model_path: str):
         return model_path in (
             "gpt-3.5-turbo",
+            "gpt-3.5-turbo-0301",
+            "gpt-3.5-turbo-0613",
             "gpt-3.5-turbo-1106",
             "gpt-4",
+            "gpt-4-0314",
+            "gpt-4-0613",
             "gpt-4-turbo",
         )
 
@@ -1027,6 +1082,22 @@ class AzureOpenAIAdapter(BaseModelAdapter):
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
         return get_conv_template("chatgpt")
+
+
+class PplxAIAdapter(BaseModelAdapter):
+    """The model adapter for Perplexity AI"""
+
+    def match(self, model_path: str):
+        return model_path in (
+            "pplx-7b-online",
+            "pplx-70b-online",
+        )
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        raise NotImplementedError()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("pplxai")
 
 
 class ClaudeAdapter(BaseModelAdapter):
@@ -1060,6 +1131,19 @@ class PaLM2Adapter(BaseModelAdapter):
 
     def match(self, model_path: str):
         return model_path == "palm-2"
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        raise NotImplementedError()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("bard")
+
+
+class GeminiAdapter(BaseModelAdapter):
+    """The model adapter for Gemini"""
+
+    def match(self, model_path: str):
+        return model_path in ["gemini-pro"]
 
     def load_model(self, model_path: str, from_pretrained_kwargs: dict):
         raise NotImplementedError()
@@ -1386,7 +1470,7 @@ class MistralAdapter(BaseModelAdapter):
     """The model adapter for Mistral AI models"""
 
     def match(self, model_path: str):
-        return "mistral" in model_path.lower()
+        return "mistral" in model_path.lower() or "mixtral" in model_path.lower()
 
     def load_model(self, model_path: str, from_pretrained_kwargs: dict):
         model, tokenizer = super().load_model(model_path, from_pretrained_kwargs)
@@ -1468,6 +1552,43 @@ class OpenOrcaAdapter(BaseModelAdapter):
         if "mistral-7b-openorca" in model_path.lower():
             return get_conv_template("mistral-7b-openorca")
         return get_conv_template("open-orca")
+
+
+class DolphinAdapter(OpenOrcaAdapter):
+    """Model adapter for ehartford/dolphin-2.2.1-mistral-7b"""
+
+    def match(self, model_path: str):
+        return "dolphin" in model_path.lower() and "mistral" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("dolphin-2.2.1-mistral-7b")
+
+
+class Hermes2Adapter(BaseModelAdapter):
+    """Model adapter for teknium/OpenHermes-2.5-Mistral-7B and teknium/OpenHermes-2-Mistral-7B models"""
+
+    use_fast_tokenizer = False
+
+    def match(self, model_path: str):
+        return any(
+            model_str in model_path.lower()
+            for model_str in ["openhermes-2.5-mistral-7b", "openhermes-2-mistral-7b"]
+        )
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        revision = from_pretrained_kwargs.get("revision", "main")
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path, use_fast=self.use_fast_tokenizer, revision=revision
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            low_cpu_mem_usage=True,
+            **from_pretrained_kwargs,
+        ).eval()
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("OpenHermes-2.5-Mistral-7B")
 
 
 class WizardCoderAdapter(BaseModelAdapter):
@@ -1681,6 +1802,31 @@ class Lamma2ChineseAdapter(BaseModelAdapter):
         return get_conv_template("llama2-chinese")
 
 
+class Lamma2ChineseAlpacaAdapter(BaseModelAdapter):
+    """The model adapter for ymcui/Chinese-LLaMA-Alpaca sft"""
+
+    def match(self, model_path: str):
+        return "chinese-alpaca" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        revision = from_pretrained_kwargs.get("revision", "main")
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            revision=revision,
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            **from_pretrained_kwargs,
+        )
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("chinese-alpaca2")
+
+
 class VigogneAdapter(BaseModelAdapter):
     """The model adapter for vigogne (e.g., bofenghuang/vigogne-2-7b-chat)"""
 
@@ -1759,6 +1905,22 @@ class CodeLlamaAdapter(BaseModelAdapter):
         return get_conv_template("llama-2")
 
 
+class StableVicunaAdapter(BaseModelAdapter):
+    """The model adapter for StableVicuna"""
+
+    def match(self, model_path: str):
+        return "stable-vicuna" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        model, tokenizer = super().load_model(model_path, from_pretrained_kwargs)
+        model.config.eos_token_id = tokenizer.eos_token_id
+        model.config.pad_token_id = tokenizer.pad_token_id
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("stable-vicuna")
+
+
 class PhindCodeLlamaAdapter(CodeLlamaAdapter):
     """The model adapter for Phind-CodeLlama (e.g., Phind/Phind-CodeLlama-34B-v2)"""
 
@@ -1787,6 +1949,36 @@ class ZephyrAdapter(BaseModelAdapter):
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
         return get_conv_template("zephyr")
+
+
+class NotusAdapter(BaseModelAdapter):
+    """The model adapter for Notus (e.g. argilla/notus-7b-v1)"""
+
+    def match(self, model_path: str):
+        return "notus" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("zephyr")
+
+
+class CatPPTAdapter(BaseModelAdapter):
+    """The model adapter for CatPPT (e.g. rishiraj/CatPPT)"""
+
+    def match(self, model_path: str):
+        return "catppt" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("catppt")
+
+
+class TinyLlamaAdapter(BaseModelAdapter):
+    """The model adapter for TinyLlama (e.g. TinyLlama/TinyLlama-1.1B-Chat-v1.0)"""
+
+    def match(self, model_path: str):
+        return "tinyllama" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("TinyLlama")
 
 
 class XwinLMAdapter(BaseModelAdapter):
@@ -1827,9 +2019,94 @@ class PygmalionAdapter(BaseModelAdapter):
         return get_conv_template("metharme")
 
 
+class XdanAdapter(BaseModelAdapter):
+    """The model adapter for xDAN-AI (e.g. xDAN-AI/xDAN-L1-Chat-RL-v1)"""
+
+    def match(self, model_path: str):
+        return "xdan" in model_path.lower() and "v1" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("xdan-v1")
+
+
+class MicrosoftOrcaAdapter(BaseModelAdapter):
+    """The model adapter for Microsoft/Orca-2 series of models (e.g. Microsoft/Orca-2-7b, Microsoft/Orca-2-13b)"""
+
+    use_fast_tokenizer = False  # Flag neeeded since tokenizers>=0.13.3 is required for a normal functioning of this module
+
+    def match(self, model_path: str):
+        return "orca-2" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("orca-2")
+
+
+class YiAdapter(BaseModelAdapter):
+    """The model adapter for Yi models"""
+
+    def match(self, model_path: str):
+        return "yi-" in model_path.lower() and "chat" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("Yi-34b-chat")
+
+
+class DeepseekCoderAdapter(BaseModelAdapter):
+    """The model adapter for deepseek-ai's coder models"""
+
+    def match(self, model_path: str):
+        return "deepseek-coder" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("deepseek-coder")
+
+
+class DeepseekChatAdapter(BaseModelAdapter):
+    """The model adapter for deepseek-ai's chat models"""
+
+    # Note: that this model will require tokenizer version >= 0.13.3 because the tokenizer class is LlamaTokenizerFast
+
+    def match(self, model_path: str):
+        return "deepseek-llm" in model_path.lower() and "chat" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("deepseek-chat")
+
+
+class MetaMathAdapter(BaseModelAdapter):
+    """The model adapter for MetaMath models"""
+
+    def match(self, model_path: str):
+        return "metamath" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("metamath")
+
+
+class BagelAdapter(BaseModelAdapter):
+    """Model adapter for jondurbin/bagel-* models"""
+
+    def match(self, model_path: str):
+        return "bagel" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("airoboros_v3")
+
+
+class SolarAdapter(BaseModelAdapter):
+    """The model adapter for upstage/SOLAR-10.7B-Instruct-v1.0"""
+
+    def match(self, model_path: str):
+        return "solar-" in model_path.lower() and "instruct" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("solar")
+
+
 # Note: the registration order matters.
 # The one registered earlier has a higher matching priority.
 register_model_adapter(PeftModelAdapter)
+register_model_adapter(StableVicunaAdapter)
 register_model_adapter(VicunaAdapter)
 register_model_adapter(AiroborosAdapter)
 register_model_adapter(LongChatAdapter)
@@ -1849,6 +2126,7 @@ register_model_adapter(OpenBuddyAdapter)
 register_model_adapter(PhoenixAdapter)
 register_model_adapter(BardAdapter)
 register_model_adapter(PaLM2Adapter)
+register_model_adapter(GeminiAdapter)
 register_model_adapter(ChatGPTAdapter)
 register_model_adapter(AzureOpenAIAdapter)
 register_model_adapter(ClaudeAdapter)
@@ -1876,6 +2154,8 @@ register_model_adapter(StarChatAdapter)
 register_model_adapter(Llama2Adapter)
 register_model_adapter(CuteGPTAdapter)
 register_model_adapter(OpenOrcaAdapter)
+register_model_adapter(DolphinAdapter)
+register_model_adapter(Hermes2Adapter)
 register_model_adapter(MistralAdapter)
 register_model_adapter(WizardCoderAdapter)
 register_model_adapter(QwenChatAdapter)
@@ -1883,6 +2163,7 @@ register_model_adapter(AquilaChatAdapter)
 register_model_adapter(BGEAdapter)
 register_model_adapter(E5Adapter)
 register_model_adapter(Lamma2ChineseAdapter)
+register_model_adapter(Lamma2ChineseAlpacaAdapter)
 register_model_adapter(VigogneAdapter)
 register_model_adapter(OpenLLaMaOpenInstructAdapter)
 register_model_adapter(ReaLMAdapter)
@@ -1890,10 +2171,21 @@ register_model_adapter(PhindCodeLlamaAdapter)
 register_model_adapter(CodeLlamaAdapter)
 register_model_adapter(Llama2ChangAdapter)
 register_model_adapter(ZephyrAdapter)
+register_model_adapter(NotusAdapter)
+register_model_adapter(CatPPTAdapter)
+register_model_adapter(TinyLlamaAdapter)
 register_model_adapter(XwinLMAdapter)
 register_model_adapter(LemurAdapter)
 register_model_adapter(PygmalionAdapter)
-
+register_model_adapter(MicrosoftOrcaAdapter)
+register_model_adapter(XdanAdapter)
+register_model_adapter(YiAdapter)
+register_model_adapter(PplxAIAdapter)
+register_model_adapter(DeepseekCoderAdapter)
+register_model_adapter(DeepseekChatAdapter)
+register_model_adapter(MetaMathAdapter)
+register_model_adapter(BagelAdapter)
+register_model_adapter(SolarAdapter)
 
 # After all adapters, try the default base adapter.
 register_model_adapter(BaseModelAdapter)
