@@ -37,6 +37,7 @@ def run_eval(
         max_gpu_memory: object,
         dtype: object,
         revision: object,
+        cache_dir: object = "/root/autodl-tmp/model",
 ) -> object:
     questions = load_questions(question_file, question_begin, question_end)
     # random shuffle the questions to balance the loading
@@ -69,6 +70,7 @@ def run_eval(
                 max_gpu_memory,
                 dtype=dtype,
                 revision=revision,
+                cache_dir=cache_dir,
             )
         )
 
@@ -87,17 +89,18 @@ def get_model_answers(
         num_gpus_per_model,
         max_gpu_memory,
         dtype,
-        revision
+        revision,
+        cache_dir="/root/autodl-tmp/model",
 ):
     print("model_path:", model_path, "model_id:", model_id, "revision:", revision)
     try:
-        model_dir = snapshot_download(model_path, cache_dir="/root/autodl-tmp/model", revision=revision, local_files_only=True)
+        model_dir = snapshot_download(model_path, cache_dir=cache_dir, revision=revision, local_files_only=True)
     except ValueError:
-        model_dir = snapshot_download(model_path, cache_dir="/root/autodl-tmp/model", revision=revision,
+        model_dir = snapshot_download(model_path, cache_dir=cache_dir, revision=revision,
                                       local_files_only=False)
     print("model_dir:", model_dir)
     # llm = LLM(model=model_dir, trust_remote_code=True)
-    llm = LLM(model="/root/autodl-tmp/model/" + model_path, trust_remote_code=True)
+    llm = LLM(model=model_dir, trust_remote_code=True)
     prompts = []
 
     for question in tqdm(questions):

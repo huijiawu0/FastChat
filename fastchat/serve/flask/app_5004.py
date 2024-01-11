@@ -25,7 +25,7 @@ app_dir = os.path.abspath(os.path.dirname(__file__))
 DATA_PATH = os.path.join(app_dir, 'resources', 'data_config.json')
 with open(DATA_PATH) as file:
     DATA_JSON = json.load(file)
-DATA_DICT = {dataset["data_id"]: dataset for dataset in DATA_JSON["datasets"]}
+DATA_DICT = {dataset["data_id"]: dataset for dataset in DATA_JSON[0]["datasets"]}
 
 MODEL_PATH = os.path.join(app_dir, 'resources', 'model_config.json')
 with open(MODEL_PATH) as file:
@@ -70,7 +70,6 @@ def get_modelpage_detail():
     for model, scores in ability_scores.items():
         model_scores = {"model": model}
         model_scores.update(scores)
-        # 将这个新字典添加到列表中
         ability_scores_array.append(model_scores)
     result = {
         "request_id": request_id,
@@ -87,7 +86,7 @@ def get_modelpage_detail():
 def get_datapage_list():
     request_id = random_uuid()
     result = DATA_JSON.copy()
-    result.update({"request_id": request_id})
+    result.append({"request_id": request_id})
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -187,62 +186,73 @@ def get_leaderboard_detail():
     return json.dumps(result, ensure_ascii=False)
 
 
-@app.route('/judge', methods=['POST'])
-def judge():
-    data = request.json
-    # Validate input data
-    if not all(key in data for key in ['data_id']):
-        return jsonify({"error": "Missing required fields in the request"}), 400
-    
-    DATA_ID = data.get('data_id')
-    
-    directory_path = "/home/workspace/FastChat/fastchat/llm_judge/data/" + DATA_ID + "/model_answer"
-    result_dict = read_jsonl_files(directory_path)
+def calculate_score(result_dict):
     score_result = {}
-    for model in result_dict:
-        dd0 = defaultdict(list)
-        dd1 = {}
-        model_result = result_dict[model]
+    for model, model_result in result_dict.items():
+        category_status = defaultdict(list)
         for answer in model_result:
             category = answer["category"].split('|||')[0]
-            pred = answer["choices"][0]["turns"][0].split('<|im_end|>')[0]
+            pred = answer["choices"][0]["turns"][0].split('')[0]
             pred_counts = {option: pred.count(option) for option in ['A', 'B', 'C', 'D']}
             refer_counts = {option: answer["reference_answer"].count(option) for option in ['A', 'B', 'C', 'D']}
-            if all([pred_counts[option] == refer_counts[option] for option in ['A', 'B', 'C', 'D']]):
-                status = True
-            else:
-                status = False
-            dd0[category].append(status)
-        for k, v in dd0.items():
-            dd1[k] = (sum(v) / len(v), sum(v), len(v))
+            status = all(pred_counts[option] == refer_counts[option] for option in ['A', 'B', 'C', 'D'])
+            category_status[category].append(status)
         
-        print(model, dd1)
-        s0 = sum([v[1] for v in dd1.values()])
-        s1 = sum([v[2] for v in dd1.values()])
-        score_result.update({model: (s0, s1, s0 / s1)})
+        category_score = {k: (sum(v) / len(v), sum(v), len(v)) for k, v in category_status.items()}
+        total_correct = sum(v[1] for v in category_score.values())
+        total_questions = sum(v[2] for v in category_score.values())
+        score_result[model] = (
+        total_correct, total_questions, total_correct / total_questions if total_questions else 0)
     
-    try:
-        start_time = get_start_time()
-        end_time = get_end_time()
-        result = {"output": score_result,
-                  "data_id": DATA_ID,
-                  "time_start": start_time,
-                  "time_end": end_time}
-        return jsonify(result)
-    except subprocess.CalledProcessError:
-        return jsonify({"error": "Script execution failed"}), 500
+    return score_result
 
 
-@app.route('/generate', methods=['POST'])
-def generate():
+def get_total_scores(model_scores):
+    total_scores = {}
+    for model, scores in model_scores.items():
+        total_scores[model] = sum(scores.values())
+    return total_scores
+
+
+@app.route('/get_report', methods=['POST'])
+def get_report():
     data = request.json
-    # Validate input data
-    if not all(key in data for key in ['model_name', 'model_id', 'data_id']):
+    data_ids = data.get('data_ids')
+    model_ids = data.get('model_ids')
+    print(data_ids, model_ids)
+
+    if not data_ids or not model_ids:
         return jsonify({"error": "Missing required fields in the request"}), 400
-    model_name = data.get('model_name')
-    model_id = data.get('model_id')
-    data_id = data.get('data_id')
-    revision = data.get('revision')
+    
+    report = calculate_model_scores(data_ids)
+    
+    header = ['Model ID', 'Total Score'] + data_ids
+    leaderboard = [header]
+    for model, model_data in report.items():
+        row = [model]
+        total_correct = model_data['total_correct']
+        total_questions = model_data['total_questions']
+        total_score = total_correct / total_questions if total_questions > 0 else 0
+        row.append(total_score)
+        for data_id in data_ids:
+            score_per_category = model_data['score_per_category'].get(data_id, {"correct": 0, "total": 0})
+            category_score = score_per_category['correct'] / score_per_category['total'] if score_per_category[
+                                                                                                'total'] > 0 else 0
+            row.append(category_score)
+        leaderboard.append(row)
+
+    return jsonify({"leaderboard": leaderboard})
+
+
+@app.route('/run_evaluate', methods=['POST'])
+def run_evaluate():
+    data = request.json
+    if not all(key in data for key in ['model_names', 'model_ids', 'data_ids']):
+        return jsonify({"error": "Missing required fields in the request"}), 400
+    model_names = data.get('model_names')
+    model_ids = data.get('model_ids')
+    data_ids = data.get('data_ids')
+    revision = data.get('revision', None)
     question_begin = data.get('question_begin', None)
     question_end = data.get('question_end', None)
     max_new_token = data.get('max_new_token', 1024)
@@ -251,54 +261,44 @@ def generate():
     num_gpus_total = data.get('num_gpus_total', 1)
     max_gpu_memory = data.get('max_gpu_memory', 16)
     dtype = str_to_torch_dtype(data.get('dtype', None))
-    
-    # GPUs = get_free_gpus()
-    # if "13b" in model_name or "13B" in model_name or "20b" in model_name or "20B" in model_name:
-    #     if len(GPUs) >= 2:
-    #         GPU = GPUs[:2]
-    #         GPU = ', '.join(map(str, GPU))
-    #         tensor_parallel_size = 2
-    #     else:
-    #         return "暂无空闲GPU..."
-    # else:
-    #     if GPUs:
-    #         GPU = GPUs[-1]
-    #         tensor_parallel_size = 1
-    #     else:
-    #         return "暂无空闲GPU..."
-    # print(f"use GPU {GPU}")
-    model_id = generate_random_model_id()
-    model_name1 = model_name.split('/')[-1]
-    output_file = f'/home/workspace/FastChat/fastchat/llm_judge/data/{data_id}/model_answer/{model_name1}.jsonl'
-    # command = f"/home/workspace/FastChat/scripts/infer_answer_vllm.sh \"{model_name}\" \"{model_id}\" \"{data_id}\" \"{GPU}\" \"{tensor_parallel_size}\" \"{output_file}\" \"{revision}\""
-    question_file = f"/home/workspace/FastChat/fastchat/llm_judge/data/{data_id}/question.jsonl"
-    
+    cache_dir = data.get('cache_dir', "/root/autodl-tmp/model")
+    base_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    print("model_names:", model_names, "model_ids:", model_ids, "data_ids:", data_ids, "cache_dir:", cache_dir)
     try:
         start_time = get_start_time()
-        run_eval(
-            model_path=model_name,
-            model_id=model_id,
-            question_file=question_file,
-            question_begin=question_begin,
-            question_end=question_end,
-            answer_file=output_file,
-            max_new_token=max_new_token,
-            num_choices=num_choices,
-            num_gpus_per_model=num_gpus_per_model,
-            num_gpus_total=num_gpus_total,
-            max_gpu_memory=max_gpu_memory,
-            dtype=dtype,
-            revision=revision
-        )
+        outputs = []
+        for data_id in data_ids:
+            question_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "question.jsonl")
+            for model_name, model_id in zip(model_names, model_ids):
+                output_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "model_answer",
+                                           f"{model_id}.jsonl")
+                run_eval(
+                    model_path=model_name,
+                    model_id=model_id,
+                    question_file=question_file,
+                    question_begin=question_begin,
+                    question_end=question_end,
+                    answer_file=output_file,
+                    max_new_token=max_new_token,
+                    num_choices=num_choices,
+                    num_gpus_per_model=num_gpus_per_model,
+                    num_gpus_total=num_gpus_total,
+                    max_gpu_memory=max_gpu_memory,
+                    dtype=dtype,
+                    revision=revision,
+                    cache_dir=cache_dir
+                )
+                outputs.append(
+                    {"data_id": data_id, "model_id": model_id, "model_name": model_name, "output": output_file})
         end_time = get_end_time()
-        result = {"outputfile": output_file,
-                  "model_name": model_name,
-                  "model_id": model_id,
-                  "data_id": data_id,
+        result = {"outputs": outputs,
+                  "model_names": model_names,
+                  "model_ids": model_ids,
+                  "data_ids": data_ids,
                   "time_start": start_time,
                   "time_end": end_time}
-        append_dict_to_jsonl(f"/home/workspace/FastChat/fastchat/llm_judge/data/{data_id}/app_output.jsonl",
-                             {model_id: result})
+        # append_dict_to_jsonl(f"/home/workspace/FastChat/fastchat/llm_judge/data/{data_id}/app_output.jsonl",
+        #                      {model_id: result})
         return jsonify(result)
     except subprocess.CalledProcessError:
         return jsonify({"error": "Script execution failed"}), 500
