@@ -31,6 +31,7 @@ MODEL_PATH = os.path.join(app_dir, 'resources', 'model_config.json')
 with open(MODEL_PATH) as file:
     MODEL_JSON = json.load(file)
 MODEL_DICT = {model["model_id"]: model for model in MODEL_JSON["models"]}
+BASE_PATH = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
 def generate_random_model_id():
@@ -198,37 +199,55 @@ def get_total_scores(model_scores):
 
 @app.route('/get_report', methods=['POST'])
 def get_report():
-    request_id = random_uuid()
-    data = request.json
-    data_ids = data.get('data_ids')
-    model_ids = data.get('model_ids')
-    print(data_ids, model_ids)
+    def get_evaluation_results(request_id):
+        log_folder = os.path.join(BASE_PATH, "llm_judge", "log")
+        os.makedirs(log_folder, exist_ok=True)
+        log_path = os.path.join(log_folder, "eval_log.jsonl")
+        with open(log_path, 'r') as f:
+            for line in f:
+                js0 = json.loads(line)
+                if request_id in js0:
+                    return js0[request_id]
+        return None
     
-    if not data_ids or not model_ids:
-        return jsonify({"error": "Missing required fields in the request"}), 400
-    
-    report = calculate_model_scores(data_ids)
-    
-    header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
-    leaderboard = [header]
-    for model, model_data in report.items():
-        row = [model]
-        total_correct = model_data['total_correct']
-        total_questions = model_data['total_questions']
-        total_score = total_correct / total_questions if total_questions > 0 else 0
-        row.append(total_score)
-        for data_id in data_ids:
-            score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
-            category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
-                if score_per_data_id['total'] > 0 else 0
-            row.append(category_score)
-        report = get_cache()
-        row.append(get_end_time())
-        row.append(report)
-        leaderboard.append(row)
-    
-    return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
+    def get_report_by_ids(request_id, data_ids, model_ids):
+        report = calculate_model_scores(data_ids)
+        header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
+        leaderboard = [header]
+        for model, model_data in report.items():
+            if model not in model_ids:
+                print("model not in model_ids:", model, model_ids)
+                continue
+            else:
+                row = [model]
+                total_correct = model_data['total_correct']
+                total_questions = model_data['total_questions']
+                total_score = total_correct / total_questions if total_questions > 0 else 0
+                row.append(total_score)
+                for data_id in data_ids:
+                    score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
+                    category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
+                        if score_per_data_id['total'] > 0 else 0
+                    row.append(category_score)
+                report = get_cache()
+                row.append(get_end_time())
+                row.append(report)
+                leaderboard.append(row)
+        return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
 
+    data = request.json
+    request_id = data.get('request_id')
+    if not request_id:
+        return jsonify({"error": "Missing request_id in the request"}), 400
+
+    evaluation_results = get_evaluation_results(request_id)
+    if evaluation_results is not None:
+        data_ids = evaluation_results["data_ids"]
+        model_ids = evaluation_results["model_ids"]
+        return get_report_by_ids(request_id, data_ids, model_ids)
+    else:
+        return jsonify({"error": f"No evaluation results found by request_id {request_id}"}), 400
+    
 
 @app.route('/run_evaluate', methods=['POST'])
 def run_evaluate():
@@ -249,15 +268,14 @@ def run_evaluate():
     max_gpu_memory = data.get('max_gpu_memory', 16)
     dtype = str_to_torch_dtype(data.get('dtype', None))
     cache_dir = data.get('cache_dir', "/root/autodl-tmp/model")
-    base_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     print("model_names:", model_names, "model_ids:", model_ids, "data_ids:", data_ids, "cache_dir:", cache_dir)
     try:
         start_time = get_start_time()
         outputs = []
         for data_id in data_ids:
-            question_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "question.jsonl")
+            question_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "question.jsonl")
             for model_name, model_id in zip(model_names, model_ids):
-                output_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "model_answer",
+                output_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "model_answer",
                                            f"{model_id}.jsonl")
                 run_eval(
                     model_path=model_name, model_id=model_id, question_file=question_file,
@@ -271,11 +289,11 @@ def run_evaluate():
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
                 outputs.append(temp)
-                save_folder = os.path.join(base_path, "llm_judge", "log")
-                os.makedirs(save_folder, exist_ok=True)
-                save_path = os.path.join(save_folder, "eval_log.jsonl")
-                print("save_path:", save_path)
-                append_dict_to_jsonl(save_path, {request_id: temp})
+                log_folder = os.path.join(BASE_PATH, "llm_judge", "log")
+                os.makedirs(log_folder, exist_ok=True)
+                log_path = os.path.join(log_folder, "eval_log.jsonl")
+                print("log_path:", log_path)
+                append_dict_to_jsonl(log_path, {request_id: temp})
 
         end_time = get_end_time()
         result = {
