@@ -271,7 +271,9 @@ def run_evaluate():
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
                 outputs.append(temp)
-                save_path = os.path.join(base_path, "llm_judge", "data", str(data_id), "eval_log.jsonl")
+                save_folder = os.path.join(base_path, "llm_judge", "log")
+                os.makedirs(save_folder, exist_ok=True)
+                save_path = os.path.join(save_folder, "eval_log.jsonl")
                 print("save_path:", save_path)
                 append_dict_to_jsonl(save_path, {request_id: temp})
 
