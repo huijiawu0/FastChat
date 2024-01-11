@@ -69,12 +69,12 @@ def get_modelpage_detail():
     # sys_prompt = get_system_prompt()
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
-
+    
     ability_scores = overall_report[MODEL_ID]["score_per_category"]
     ability_scores_array = []
     for ability, scores in ability_scores.items():
         ability_scores_array.append({"ability": ability, **scores})
-
+    
     scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
     data_id_scores = []
     for data_id, scores in scores_per_data_id.items():
@@ -184,7 +184,7 @@ def calculate_score(result_dict):
         total_correct = sum(v[1] for v in category_score.values())
         total_questions = sum(v[2] for v in category_score.values())
         score_result[model] = (
-        total_correct, total_questions, total_correct / total_questions if total_questions else 0)
+            total_correct, total_questions, total_correct / total_questions if total_questions else 0)
     
     return score_result
 
@@ -203,7 +203,7 @@ def get_report():
     data_ids = data.get('data_ids')
     model_ids = data.get('model_ids')
     print(data_ids, model_ids)
-
+    
     if not data_ids or not model_ids:
         return jsonify({"error": "Missing required fields in the request"}), 400
     
@@ -226,12 +226,13 @@ def get_report():
         row.append(get_end_time())
         row.append(report)
         leaderboard.append(row)
-
-    return json.dumps({"request_id":request_id, "leaderboard": leaderboard}, ensure_ascii=False)
+    
+    return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
 
 
 @app.route('/run_evaluate', methods=['POST'])
 def run_evaluate():
+    request_id = random_uuid()
     data = request.json
     if not all(key in data for key in ['model_names', 'model_ids', 'data_ids']):
         return jsonify({"error": "Missing required fields in the request"}), 400
@@ -259,32 +260,31 @@ def run_evaluate():
                 output_file = os.path.join(base_path, "llm_judge", "data", str(data_id), "model_answer",
                                            f"{model_id}.jsonl")
                 run_eval(
-                    model_path=model_name,
-                    model_id=model_id,
-                    question_file=question_file,
-                    question_begin=question_begin,
-                    question_end=question_end,
-                    answer_file=output_file,
-                    max_new_token=max_new_token,
-                    num_choices=num_choices,
-                    num_gpus_per_model=num_gpus_per_model,
-                    num_gpus_total=num_gpus_total,
-                    max_gpu_memory=max_gpu_memory,
-                    dtype=dtype,
-                    revision=revision,
-                    cache_dir=cache_dir
+                    model_path=model_name, model_id=model_id, question_file=question_file,
+                    question_begin=question_begin, question_end=question_end,
+                    answer_file=output_file, max_new_token=max_new_token,
+                    num_choices=num_choices, num_gpus_per_model=num_gpus_per_model,
+                    num_gpus_total=num_gpus_total, max_gpu_memory=max_gpu_memory,
+                    dtype=dtype, revision=revision, cache_dir=cache_dir
                 )
-                outputs.append(
-                    {"data_id": data_id, "model_id": model_id, "model_name": model_name, "output": output_file})
+                temp = {"request_id": request_id, "data_id": data_id,
+                        "model_id": model_id, "model_name": model_name,
+                        "output": output_file}
+                outputs.append(temp)
+                save_path = os.path.join(base_path, "llm_judge", "data", str(data_id), "eval_log.jsonl")
+                print("save_path:", save_path)
+                append_dict_to_jsonl(save_path, {request_id: temp})
+
         end_time = get_end_time()
-        result = {"outputs": outputs,
-                  "model_names": model_names,
-                  "model_ids": model_ids,
-                  "data_ids": data_ids,
-                  "time_start": start_time,
-                  "time_end": end_time}
-        # append_dict_to_jsonl(f"/home/workspace/FastChat/fastchat/llm_judge/data/{data_id}/app_output.jsonl",
-        #                      {model_id: result})
+        result = {
+            "request_id": request_id,
+            "outputs": outputs,
+            "model_names": model_names,
+            "model_ids": model_ids,
+            "data_ids": data_ids,
+            "time_start": start_time,
+            "time_end": end_time
+        }
         return jsonify(result)
     except subprocess.CalledProcessError:
         return jsonify({"error": "Script execution failed"}), 500
