@@ -1,3 +1,4 @@
+import os
 import subprocess
 import json
 import time
@@ -8,10 +9,12 @@ import pytz
 
 
 def append_dict_to_jsonl(file_path, data_dict):
-    print("1111111111111")
     with open(file_path, 'a', encoding='utf-8') as f:
         print("save the file_path to", file_path)
-        json_str = json.dumps(data_dict, ensure_ascii=False)
+        try:
+            json_str = json.dumps(data_dict, ensure_ascii=False)
+        except TypeError as e:
+            print("TypeError: ", e, data_dict)
         f.write(json_str + '\n')
 
 
