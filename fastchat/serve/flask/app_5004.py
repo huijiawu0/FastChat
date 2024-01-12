@@ -276,7 +276,7 @@ def run_evaluate():
     num_choices = data.get('num_choices', 1)
     num_gpus_per_model = data.get('num_gpus_per_model', 1)
     num_gpus_total = data.get('num_gpus_total', 1)
-    max_gpu_memory = data.get('max_gpu_memory', 16)
+    max_gpu_memory = data.get('max_gpu_memory', 70)
     dtype = str_to_torch_dtype(data.get('dtype', None))
     cache_dir = os.environ.get('CACHE_DIR', "/root/autodl-tmp/model")
     print("model_names:", model_names, "model_ids:", model_ids, "data_ids:", data_ids, "cache_dir:", cache_dir)
@@ -288,14 +288,19 @@ def run_evaluate():
             for model_name, model_id in zip(model_names, model_ids):
                 output_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "model_answer",
                                            f"{model_id}.jsonl")
-                run_eval(
-                    model_path=model_name, model_id=model_id, question_file=question_file,
-                    question_begin=question_begin, question_end=question_end,
-                    answer_file=output_file, max_new_token=max_new_token,
-                    num_choices=num_choices, num_gpus_per_model=num_gpus_per_model,
-                    num_gpus_total=num_gpus_total, max_gpu_memory=max_gpu_memory,
-                    dtype=dtype, revision=revision, cache_dir=cache_dir
-                )
+                try:
+                    run_eval(
+                        model_path=model_name, model_id=model_id, question_file=question_file,
+                        question_begin=question_begin, question_end=question_end,
+                        answer_file=output_file, max_new_token=max_new_token,
+                        num_choices=num_choices, num_gpus_per_model=num_gpus_per_model,
+                        num_gpus_total=num_gpus_total, max_gpu_memory=max_gpu_memory,
+                        dtype=dtype, revision=revision, cache_dir=cache_dir
+                    )
+                except AttributeError as e:
+                    print("eval model error:", model_name, model_id)
+                    print(e)
+                    continue
                 temp = {"request_id": request_id, "data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
