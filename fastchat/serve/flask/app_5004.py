@@ -53,6 +53,7 @@ def get_modelpage_list():
     request_id = random_uuid()
     result = MODEL_JSON.copy()
     result.update({"request_id": request_id})
+    model_sizes = []
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -124,49 +125,91 @@ def get_datapage_detail():
     return json.dumps(result, ensure_ascii=False)
 
 
+from flask import Flask, request, json
+import uuid
+
+app = Flask(__name__)
+
+
 @app.route('/get_leaderboard_detail', methods=['POST'])
 def get_leaderboard_detail():
-    request_id = random_uuid()
+    CATEGORY = ["合规性", "公平性", "知识产权", "隐私保护", "可信度"]
+    filter_params = request.json
+    categories = filter_params.get('categories', None)
+    if categories is None:
+        categories = CATEGORY.copy()
+    model_sizes = filter_params.get('model_sizes', None)
+    datasets = filter_params.get('datasets', None)
+    print("categories:", categories, "model_sizes:", model_sizes, "datasets:", datasets)
+    selected_header = [cate for cate in CATEGORY if cate in categories]
+    all_data = [
+        {
+            "模型": "ChatGLM2",
+            "发布日期": "2023-01-01",
+            "类型": "大语言模型",
+            "参数量": "6B",
+            "数据集": "economic_ethics_dataset",
+            "综合": 85.25,
+            "合规性": 92.00,
+            "公平性": 87.75,
+            "知识产权": 88.50,
+            "隐私保护": 84.25,
+            "可信度": 89.00
+        },
+        {
+            "模型": "ChatGLM3",
+            "发布日期": "2023-02-15",
+            "类型": "大语言模型",
+            "数据集": "cultural_ethics_dataset",
+            "参数量": "7B",
+            "综合": 78.50,
+            "合规性": 80.00,
+            "公平性": 75.25,
+            "知识产权": 82.75,
+            "隐私保护": 79.25,
+            "可信度": 77.00
+        }
+    ]
+    filtered_data = all_data.copy()
+    if model_sizes is not None:
+        filtered_data = [model for model in all_data if
+                         (not model_sizes or model['参数量'] in model_sizes)]
+    if datasets is not None:
+        filtered_data = [model for model in all_data if
+                            (not datasets or model['数据集'] in filtered_data)]
+    aggregated_scores = {}
+    for model in filtered_data:
+        model_name = model['模型']
+        if model_name not in aggregated_scores:
+            aggregated_scores[model_name] = {category: 0 for category in categories}
+            aggregated_scores[model_name]['count'] = 0
+            aggregated_scores[model_name]["发布日期"] = model["发布日期"]
+            aggregated_scores[model_name]["类型"] = model["类型"]
+            aggregated_scores[model_name]["参数量"] = model["参数量"]
+        
+        for category in categories:
+            aggregated_scores[model_name][category] += model[category]
+        
+        aggregated_scores[model_name]['count'] += 1
+
+    final_data = []
+    for model_name, scores in aggregated_scores.items():
+        avg_scores = {cat: scores[cat] / scores['count'] for cat in categories}
+        final_data.append({
+            "模型": model_name,
+            "发布日期": scores["发布日期"],
+            "类型": scores["类型"],
+            "参数量": scores["参数量"],
+            "综合": sum(avg_scores.values()) / len(categories),
+            **avg_scores
+        })
+
     result = {
-        "request_id": request_id,
+        "request_id": str(uuid.uuid4()),
         "header": [
-            "模型",
-            "发布日期",
-            "类型",
-            "参数量",
-            "综合",
-            "合规性",
-            "公平性",
-            "知识产权",
-            "隐私保护",
-            "可信度"
-        ],
-        "data": [
-            {
-                "模型": "ChatGLM2",
-                "发布日期": "2023-01-01",
-                "类型": "大语言模型",
-                "参数量": "6B",
-                "综合": 85.25,
-                "合规性": 92.00,
-                "公平性": 87.75,
-                "知识产权": 88.50,
-                "隐私保护": 84.25,
-                "可信度": 89.00
-            },
-            {
-                "模型": "ChatGLM3",
-                "发布日期": "2023-02-15",
-                "类型": "大语言模型",
-                "参数量": "7B",
-                "综合": 78.50,
-                "合规性": 80.00,
-                "公平性": 75.25,
-                "知识产权": 82.75,
-                "隐私保护": 79.25,
-                "可信度": 77.00
-            }
-        ]
+            "模型", "发布日期", "类型", "参数量", "综合"
+        ] + selected_header,
+        "data": final_data
     }
     return json.dumps(result, ensure_ascii=False)
 
@@ -199,6 +242,32 @@ def get_total_scores(model_scores):
     return total_scores
 
 
+def get_report_by_ids(request_id, data_ids, model_ids):
+    report = calculate_model_scores(data_ids)
+    header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
+    leaderboard = [header]
+    for model, model_data in report.items():
+        if model not in model_ids:
+            print("model not in model_ids:", model, model_ids)
+            continue
+        else:
+            row = [model]
+            total_correct = model_data['total_correct']
+            total_questions = model_data['total_questions']
+            total_score = total_correct / total_questions if total_questions > 0 else 0
+            row.append(total_score)
+            for data_id in data_ids:
+                score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
+                category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
+                    if score_per_data_id['total'] > 0 else 0
+                row.append(category_score)
+            report = get_cache()
+            row.append(get_end_time())
+            row.append(report)
+            leaderboard.append(row)
+    return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
+
+
 @app.route('/get_report', methods=['POST'])
 def get_report():
     def get_evaluation_results(request_id):
@@ -212,36 +281,11 @@ def get_report():
                     return js0[request_id]
         return None
     
-    def get_report_by_ids(request_id, data_ids, model_ids):
-        report = calculate_model_scores(data_ids)
-        header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
-        leaderboard = [header]
-        for model, model_data in report.items():
-            if model not in model_ids:
-                print("model not in model_ids:", model, model_ids)
-                continue
-            else:
-                row = [model]
-                total_correct = model_data['total_correct']
-                total_questions = model_data['total_questions']
-                total_score = total_correct / total_questions if total_questions > 0 else 0
-                row.append(total_score)
-                for data_id in data_ids:
-                    score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
-                    category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
-                        if score_per_data_id['total'] > 0 else 0
-                    row.append(category_score)
-                report = get_cache()
-                row.append(get_end_time())
-                row.append(report)
-                leaderboard.append(row)
-        return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
-
     data = request.json
     request_id = data.get('request_id')
     if not request_id:
         return jsonify({"error": "Missing request_id in the request"}), 400
-
+    
     evaluation_results = get_evaluation_results(request_id)
     print("evaluation_results:", evaluation_results)
     if evaluation_results is not None:
@@ -250,7 +294,7 @@ def get_report():
         return get_report_by_ids(request_id, data_ids, model_ids)
     else:
         return jsonify({"error": f"No evaluation results found by request_id {request_id}"}), 400
-    
+
 
 @app.route('/run_evaluate', methods=['POST'])
 def run_evaluate():
@@ -268,7 +312,7 @@ def run_evaluate():
     if len(model_names) != len(model_ids):
         print(model_names, model_ids)
         return jsonify({"error": "model_names and model_ids should have the same length"}), 400
-
+    
     revision = data.get('revision', None)
     question_begin = data.get('question_begin', None)
     question_end = data.get('question_end', None)
@@ -301,13 +345,13 @@ def run_evaluate():
                 except AttributeError as e:
                     print("eval model error:", model_name, model_id)
                     print(e)
-                    failed.append({"model_id": model_id, "reason": e})
+                    failed.append({"model_id": model_id, "reason": str(e)})
                     continue
                 temp = {"request_id": request_id, "data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
                 outputs.append(temp)
-
+        
         end_time = get_end_time()
         result = {
             "request_id": request_id,
