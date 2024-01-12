@@ -44,11 +44,65 @@ def generate_random_model_id():
     return ''.join(random.choice(chars) for _ in range(16))
 
 
-app = Flask(__name__)
+def calculate_score(result_dict):
+    score_result = {}
+    for model, model_result in result_dict.items():
+        category_status = defaultdict(list)
+        for answer in model_result:
+            category = answer["category"].split('|||')[0]
+            pred = answer["choices"][0]["turns"][0].split('')[0]
+            pred_counts = {option: pred.count(option) for option in ['A', 'B', 'C', 'D']}
+            refer_counts = {option: answer["reference_answer"].count(option) for option in ['A', 'B', 'C', 'D']}
+            status = all(pred_counts[option] == refer_counts[option] for option in ['A', 'B', 'C', 'D'])
+            category_status[category].append(status)
+        
+        category_score = {k: (sum(v) / len(v), sum(v), len(v)) for k, v in category_status.items()}
+        total_correct = sum(v[1] for v in category_score.values())
+        total_questions = sum(v[2] for v in category_score.values())
+        score_result[model] = (
+            total_correct, total_questions, total_correct / total_questions if total_questions else 0)
+    
+    return score_result
+
+
+def get_total_scores(model_scores):
+    total_scores = {}
+    for model, scores in model_scores.items():
+        total_scores[model] = sum(scores.values())
+    return total_scores
+
+
+def get_report_by_ids(request_id, data_ids, model_ids):
+    report = calculate_model_scores(data_ids)
+    header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
+    leaderboard = [header]
+    for model, model_data in report.items():
+        if model not in model_ids:
+            print("model not in model_ids:", model, model_ids)
+            continue
+        else:
+            row = [model]
+            total_correct = model_data['total_correct']
+            total_questions = model_data['total_questions']
+            total_score = total_correct / total_questions if total_questions > 0 else 0
+            row.append(total_score)
+            for data_id in data_ids:
+                score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
+                category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
+                    if score_per_data_id['total'] > 0 else 0
+                row.append(category_score)
+            report = get_cache()
+            row.append(get_end_time())
+            row.append(report)
+            leaderboard.append(row)
+    return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
 
 
 def random_uuid() -> str:
     return str(uuid.uuid4().hex)
+
+
+app = Flask(__name__)
 
 
 @app.route('/get_modelpage_list', methods=['POST'])
@@ -126,12 +180,6 @@ def get_datapage_detail():
         "model_ids": list(overall_report.keys()),
     }
     return json.dumps(result, ensure_ascii=False)
-
-
-from flask import Flask, request, json
-import uuid
-
-app = Flask(__name__)
 
 
 @app.route('/get_leaderboard_detail', methods=['POST'])
@@ -215,60 +263,6 @@ def get_leaderboard_detail():
         "data": final_data
     }
     return json.dumps(result, ensure_ascii=False)
-
-
-def calculate_score(result_dict):
-    score_result = {}
-    for model, model_result in result_dict.items():
-        category_status = defaultdict(list)
-        for answer in model_result:
-            category = answer["category"].split('|||')[0]
-            pred = answer["choices"][0]["turns"][0].split('')[0]
-            pred_counts = {option: pred.count(option) for option in ['A', 'B', 'C', 'D']}
-            refer_counts = {option: answer["reference_answer"].count(option) for option in ['A', 'B', 'C', 'D']}
-            status = all(pred_counts[option] == refer_counts[option] for option in ['A', 'B', 'C', 'D'])
-            category_status[category].append(status)
-        
-        category_score = {k: (sum(v) / len(v), sum(v), len(v)) for k, v in category_status.items()}
-        total_correct = sum(v[1] for v in category_score.values())
-        total_questions = sum(v[2] for v in category_score.values())
-        score_result[model] = (
-            total_correct, total_questions, total_correct / total_questions if total_questions else 0)
-    
-    return score_result
-
-
-def get_total_scores(model_scores):
-    total_scores = {}
-    for model, scores in model_scores.items():
-        total_scores[model] = sum(scores.values())
-    return total_scores
-
-
-def get_report_by_ids(request_id, data_ids, model_ids):
-    report = calculate_model_scores(data_ids)
-    header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
-    leaderboard = [header]
-    for model, model_data in report.items():
-        if model not in model_ids:
-            print("model not in model_ids:", model, model_ids)
-            continue
-        else:
-            row = [model]
-            total_correct = model_data['total_correct']
-            total_questions = model_data['total_questions']
-            total_score = total_correct / total_questions if total_questions > 0 else 0
-            row.append(total_score)
-            for data_id in data_ids:
-                score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
-                category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
-                    if score_per_data_id['total'] > 0 else 0
-                row.append(category_score)
-            report = get_cache()
-            row.append(get_end_time())
-            row.append(report)
-            leaderboard.append(row)
-    return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
 
 
 @app.route('/get_report', methods=['POST'])
