@@ -33,7 +33,6 @@ def calculate_model_scores(data_id_list):
     overall_report = {}
     error_results = []
     app_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    
     for data_id in data_id_list:
         answers_directory_path = os.path.join(app_dir, "llm_judge", "data", str(data_id), "model_answer")
         if not os.path.exists(answers_directory_path):
@@ -41,13 +40,11 @@ def calculate_model_scores(data_id_list):
             continue
         else:
             model_answers = read_jsonl_files(answers_directory_path)
-
         for model, answers in model_answers.items():
             if model not in overall_report:
                 overall_report[model] = {"total_correct": 0, "total_questions": 0,
                                          "score_per_category": defaultdict(lambda: {"correct": 0, "total": 0}),
                                          "scores_per_data_id": defaultdict(lambda: {"correct": 0, "total": 0})}
-            
             for answer in answers:
                 if len(answer["reference_answer"]) > 1:
                     print("invalid reference answer", answer)

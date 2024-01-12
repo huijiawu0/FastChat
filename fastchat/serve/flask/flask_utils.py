@@ -13,9 +13,12 @@ def append_dict_to_jsonl(file_path, data_dict):
         print("save the file_path to", file_path)
         try:
             json_str = json.dumps(data_dict, ensure_ascii=False)
+            f.write(json_str + '\n')
         except TypeError as e:
             print("TypeError: ", e, data_dict)
-        f.write(json_str + '\n')
+        except UnboundLocalError as e2:
+            print("UnboundLocalError: ", e2, data_dict)
+
 
 
 def get_free_gpus():
