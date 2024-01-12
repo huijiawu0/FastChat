@@ -259,10 +259,10 @@ def run_evaluate():
     model_names = data.get('model_names', None)
     model_ids = data.get('model_ids', None)
     data_ids = data.get('data_ids', None)
-    if model_names is None or model_ids is None or data_ids is None:
-        # using default settings
+    if model_names is None or model_ids is None:
         model_names = MODEL_NAMES
         model_ids = MODEL_IDS
+    if data_ids is None:
         data_ids = DATA_IDS
         print("using default settings", model_names, model_ids, data_ids)
     if len(model_names) != len(model_ids):
@@ -280,6 +280,7 @@ def run_evaluate():
     dtype = str_to_torch_dtype(data.get('dtype', None))
     cache_dir = os.environ.get('CACHE_DIR', "/root/autodl-tmp/model")
     print("model_names:", model_names, "model_ids:", model_ids, "data_ids:", data_ids, "cache_dir:", cache_dir)
+    failed = []
     try:
         start_time = get_start_time()
         outputs = []
@@ -300,6 +301,7 @@ def run_evaluate():
                 except AttributeError as e:
                     print("eval model error:", model_name, model_id)
                     print(e)
+                    failed.append({"model_id": model_id, "reason": e})
                     continue
                 temp = {"request_id": request_id, "data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
@@ -314,7 +316,8 @@ def run_evaluate():
             "model_ids": model_ids,
             "data_ids": data_ids,
             "time_start": start_time,
-            "time_end": end_time
+            "time_end": end_time,
+            "failed": failed
         }
         log_folder = os.path.join(BASE_PATH, "llm_judge", "log")
         os.makedirs(log_folder, exist_ok=True)
