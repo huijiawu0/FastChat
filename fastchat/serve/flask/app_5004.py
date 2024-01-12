@@ -34,6 +34,9 @@ MODEL_DICT = {model["model_id"]: model for model in MODEL_JSON["models"]}
 MODEL_NAMES = [model['name'] for model in MODEL_JSON["models"]]
 MODEL_IDS = [model['model_id'] for model in MODEL_JSON["models"]]
 BASE_PATH = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+print("BASE_PATH:", BASE_PATH)
+print("DATA_PATH:", DATA_PATH)
+print("MODEL_PATH:", MODEL_PATH)
 
 
 def generate_random_model_id():
