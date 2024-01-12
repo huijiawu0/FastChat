@@ -26,11 +26,13 @@ DATA_PATH = os.path.join(app_dir, 'resources', 'data_config.json')
 with open(DATA_PATH) as file:
     DATA_JSON = json.load(file)
 DATA_DICT = {dataset["data_id"]: dataset for dataset in DATA_JSON[0]["datasets"]}
-
+DATA_IDS = [dataset["data_id"] for dataset in DATA_JSON[0]["datasets"]]
 MODEL_PATH = os.path.join(app_dir, 'resources', 'model_config.json')
 with open(MODEL_PATH) as file:
     MODEL_JSON = json.load(file)
 MODEL_DICT = {model["model_id"]: model for model in MODEL_JSON["models"]}
+MODEL_NAMES = [model['name'] for model in MODEL_JSON["models"]]
+MODEL_IDS = [model['model_id'] for model in MODEL_JSON["models"]]
 BASE_PATH = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
@@ -241,6 +243,7 @@ def get_report():
         return jsonify({"error": "Missing request_id in the request"}), 400
 
     evaluation_results = get_evaluation_results(request_id)
+    print("evaluation_results:", evaluation_results)
     if evaluation_results is not None:
         data_ids = evaluation_results["data_ids"]
         model_ids = evaluation_results["model_ids"]
@@ -253,11 +256,19 @@ def get_report():
 def run_evaluate():
     request_id = random_uuid()
     data = request.json
-    if not all(key in data for key in ['model_names', 'model_ids', 'data_ids']):
-        return jsonify({"error": "Missing required fields in the request"}), 400
-    model_names = data.get('model_names')
-    model_ids = data.get('model_ids')
-    data_ids = data.get('data_ids')
+    model_names = data.get('model_names', None)
+    model_ids = data.get('model_ids', None)
+    data_ids = data.get('data_ids', None)
+    if model_names is None or model_ids is None or data_ids is None:
+        # using default settings
+        model_names = MODEL_NAMES
+        model_ids = MODEL_IDS
+        data_ids = DATA_IDS
+        print("using default settings", model_names, model_ids, data_ids)
+    if len(model_names) != len(model_ids):
+        print(model_names, model_ids)
+        return jsonify({"error": "model_names and model_ids should have the same length"}), 400
+
     revision = data.get('revision', None)
     question_begin = data.get('question_begin', None)
     question_end = data.get('question_end', None)
@@ -267,7 +278,7 @@ def run_evaluate():
     num_gpus_total = data.get('num_gpus_total', 1)
     max_gpu_memory = data.get('max_gpu_memory', 16)
     dtype = str_to_torch_dtype(data.get('dtype', None))
-    cache_dir = data.get('cache_dir', "/root/autodl-tmp/model")
+    cache_dir = os.environ.get('CACHE_DIR', "/root/autodl-tmp/model")
     print("model_names:", model_names, "model_ids:", model_ids, "data_ids:", data_ids, "cache_dir:", cache_dir)
     try:
         start_time = get_start_time()
@@ -289,11 +300,6 @@ def run_evaluate():
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
                 outputs.append(temp)
-                log_folder = os.path.join(BASE_PATH, "llm_judge", "log")
-                os.makedirs(log_folder, exist_ok=True)
-                log_path = os.path.join(log_folder, "eval_log.jsonl")
-                print("log_path:", log_path)
-                append_dict_to_jsonl(log_path, {request_id: temp})
 
         end_time = get_end_time()
         result = {
@@ -305,6 +311,11 @@ def run_evaluate():
             "time_start": start_time,
             "time_end": end_time
         }
+        log_folder = os.path.join(BASE_PATH, "llm_judge", "log")
+        os.makedirs(log_folder, exist_ok=True)
+        log_path = os.path.join(log_folder, "eval_log.jsonl")
+        print("log_path:", log_path)
+        append_dict_to_jsonl(log_path, {request_id: result})
         return jsonify(result)
     except subprocess.CalledProcessError:
         return jsonify({"error": "Script execution failed"}), 500
