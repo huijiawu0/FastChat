@@ -123,7 +123,7 @@ def get_modelpage_detail():
     
     MODEL_ID = data.get('model_id')
     DATA_IDS = list(DATA_DICT.keys())
-    DATA_IDS.extend(["moral_bench_test1", "moral_bench_test2"])
+    # DATA_IDS.extend(["moral_bench_test1", "moral_bench_test2"])
     print("model_id:", MODEL_ID, "data_ids:", DATA_IDS)
     overall_report = calculate_model_scores(DATA_IDS)
     print("overall_report:", overall_report)
