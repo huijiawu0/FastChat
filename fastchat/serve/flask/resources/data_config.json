@@ -420,7 +420,7 @@
                                 "end": ". THE END",
                                 "summary": {
                                     "text": "Joe Bloggs begins his journey exploring...",
-                                    "tokens": ["Joe", "Bloggs", "begins", "his", "journey", "exploring",...],
+                                    "tokens": ["Joe", "Bloggs", "begins", "his", "journey", "exploring","..."],
                                     "url": "http://en.wikipedia.org/wiki/Name_of_Movie",
                                     "title": "Name of Movie (film)"
                                 },
