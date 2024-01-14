@@ -404,14 +404,37 @@
                 "type":"short-answer question answering",
                 "source":"books and movie scripts",
                 "contributors":"annotators from summaries",
-                "year":2018,
+                "year":"2018",
                 "language":"English",
-                "description":"The NarrativeQA benchmark for reading comprehension over narratives.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"NarrativeQA基准测试，用于对叙事的阅读理解",
+                "detail":"NarrativeQA 是一个英语数据集，包括故事和相应的问题，旨在测试阅读理解能力，尤其是对长文档的理解。",
+                "citation":"@article{narrativeqa,\nauthor = {Tom\\'a\\v s Ko\\v cisk\\'y and Jonathan Schwarz and Phil Blunsom and\n          Chris Dyer and Karl Moritz Hermann and G\\'abor Melis and\n          Edward Grefenstette},\ntitle = {The {NarrativeQA} Reading Comprehension Challenge},\njournal = {Transactions of the Association for Computational Linguistics},\nurl = {https://TBD},\nvolume = {TBD},\nyear = {2018},\npages = {TBD},\n}",
+                "example":[{
+                            "document": {
+                                "id": "23jncj2n3534563110",
+                                "kind": "movie",
+                                "url": "https://www.imsdb.com/Movie%20Scripts/Name%20of%20Movie.html",
+                                "file_size": 80473,
+                                "word_count": 41000,
+                                "start": "MOVIE screenplay by",
+                                "end": ". THE END",
+                                "summary": {
+                                    "text": "Joe Bloggs begins his journey exploring...",
+                                    "tokens": ["Joe", "Bloggs", "begins", "his", "journey", "exploring",...],
+                                    "url": "http://en.wikipedia.org/wiki/Name_of_Movie",
+                                    "title": "Name of Movie (film)"
+                                },
+                                "text": "MOVIE screenplay by John Doe\nSCENE 1..."
+                            },
+                            "question": {
+                                "text": "Where does Joe Bloggs live?",
+                                "tokens": ["Where", "does", "Joe", "Bloggs", "live", "?"]
+                            },
+                            "answers": [
+                                {"text": "At home", "tokens": ["At", "home"]},
+                                {"text": "His house", "tokens": ["His", "house"]}
+                            ]
+                            }]
             },
             {
                 "name":"NaturalQuestions (closed-book)",
@@ -422,12 +445,10 @@
                 "contributors":"web users",
                 "year":"2010s",
                 "language":"English",
-                "description":"The NaturalQuestions benchmark for question answering based on naturally-occurring queries through Google Search without the Wikipedia page with the answer.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"自然问题（NaturalQuestions）基准测试是基于通过Google搜索产生的自然出现的查询的问答测试，而不是带有答案的维基百科页面。",
+                "detail":"自然问题（Natural Questions，简称NQ）包含了真实用户向谷歌搜索提出的问题，以及由注释者从维基百科中找到的答案。NQ旨在用于自动问题回答系统的培训和评估。",
+                "citation":"\n@article{47761,\ntitle\t= {Natural Questions: a Benchmark for Question Answering Research},\nauthor\t= {Tom Kwiatkowski and Jennimaria Palomaki and Olivia Redfield and Michael Collins and Ankur Parikh and Chris Alberti and Danielle Epstein and Illia Polosukhin and Matthew Kelcey and Jacob Devlin and Kenton Lee and Kristina N. Toutanova and Llion Jones and Ming-Wei Chang and Andrew Dai and Jakob Uszkoreit and Quoc Le and Slav Petrov},\nyear\t= {2019},\njournal\t= {Transactions of the Association of Computational Linguistics}\n}\n",
+                "example":[]
             },
             {
                 "name":"NaturalQuestions (open-book)",
@@ -438,12 +459,10 @@
                 "contributors":"web users",
                 "year":"2010s",
                 "language":"English",
-                "description":"The NaturalQuestions benchmark for question answering based on naturally-occurring queries through Google Search including the Wikipedia page with the answer.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"NaturalQuestions基准测试，这是基于通过谷歌搜索自然发生的查询来进行问题回答的，包括含有答案的维基百科页面。",
+                "detail":"自然问题（Natural Questions，简称NQ）包含了真实用户向谷歌搜索提出的问题，以及由注释者从维基百科中找到的答案。NQ旨在用于自动问题回答系统的培训和评估。",
+                "citation":"@article{47761,\ntitle\t= {Natural Questions: a Benchmark for Question Answering Research},\nauthor\t= {Tom Kwiatkowski and Jennimaria Palomaki and Olivia Redfield and Michael Collins and Ankur Parikh and Chris Alberti and Danielle Epstein and Illia Polosukhin and Matthew Kelcey and Jacob Devlin and Kenton Lee and Kristina N. Toutanova and Llion Jones and Ming-Wei Chang and Andrew Dai and Jakob Uszkoreit and Quoc Le and Slav Petrov},\nyear\t= {2019},\njournal\t= {Transactions of the Association of Computational Linguistics}\n}\n",
+                "example":[{"question": "when was the last time anyone was on the moon", "answer": ["14 December 1972 UTC", "December 1972"]}]
             },
             {
                 "name":"OpenbookQA",
@@ -452,14 +471,12 @@
                 "type":"multiple-choice question answering",
                 "source":"elementary science",
                 "contributors":"Amazon Mechnical Turk workers",
-                "year":2018,
+                "year":"2018",
                 "language":"English",
-                "description":"The OpenbookQA benchmark for commonsense-intensive open book question answering.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"OpenbookQA基准测试，用于常识密集型的开放书本问题回答。",
+                "detail":"OpenBookQA包含需要多步推理、运用常识知识、深入理解文本等能力的问题，是一种新型的问答数据集，其模式借鉴了开放式书本考试，用于评估人类对某一主题理解的程度。",
+                "citation":"@inproceedings{OpenBookQA2018,\n title={Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering},\n author={Todor Mihaylov and Peter Clark and Tushar Khot and Ashish Sabharwal},\n booktitle={EMNLP},\n year={2018}\n}\n",
+                "example":[{"id": "8-343", "question": {"stem": "A person wants to start saving money so that they can afford a nice vacation at the end of the year. After looking over their budget and expenses, they decide the best way to save money is to", "choices": [{"text": "make more phone calls", "label": "A"}, {"text": "quit eating lunch out", "label": "B"}, {"text": "buy less with monopoly money", "label": "C"}, {"text": "have lunch with friends", "label": "D"}]}, "answerKey": "B"}]
             },
             {
                 "name":"MMLU (Massive Multitask Language Understanding)",
@@ -470,12 +487,10 @@
                 "contributors":"various online sources",
                 "year":"before 2021",
                 "language":"English",
-                "description":"The Massive Multitask Language Understanding benchmark for knowledge-intensive question answering across 57 domains.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"大规模多任务语言理解(MMLU)基准测试，用于跨越57个领域的知识密集型问题回答。",
+                "detail":"MMLU（大规模多任务语言理解）是一个新的基准测试，旨在通过仅在零样本学习（zero-shot）和少样本学习（few-shot）设置中评估模型，来衡量在预训练期间获得的知识。这使得基准测试更具挑战性，并且与我们评估人类的方式更为相似。该基准测试涵盖了STEM、人文学科、社会科学等57个主题。难度范围从基础水平到高级专业水平，它测试了世界知识和问题解决能力。主题范围从传统领域如数学和历史，到更专业的领域如法律和伦理。主题的细致程度和广度使得这一基准测试成为识别模型盲点的理想工具。",
+                "citation":"@article{hendryckstest2021,\n  title={Measuring Massive Multitask Language Understanding},\n  author={Dan Hendrycks and Collin Burns and Steven Basart and Andy Zou and Mantas Mazeika and Dawn Song and Jacob Steinhardt},\n  journal={Proceedings of the International Conference on Learning Representations (ICLR)},\n  year={2021}\n}\n\n@article{hendrycks2021ethics,\n  title={Aligning AI With Shared Human Values},\n  author={Dan Hendrycks and Collin Burns and Steven Basart and Andrew Critch and Jerry Li and Dawn Song and Jacob Steinhardt},\n  journal={Proceedings of the International Conference on Learning Representations (ICLR)},\n  year={2021}\n}\n",
+                "example":["Question: In 2016, about how many people in the United States were homeless?\nA. 55,000\nB. 550,000\nC. 5,500,000\nD. 55,000,000\nAnswer: B\n"]
             },
             {
                 "name":"GSM8K (Grade School Math)",
@@ -484,14 +499,16 @@
                 "type":"numeric answer question answering",
                 "source":"grade school math word problems",
                 "contributors":"contractors on Upwork and Surge AI",
-                "year":2021,
+                "year":"2021",
                 "language":"English",
                 "description":"The grade school math word problems dataset for testing mathematical reasoning on grade-school math problems.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "detail":"GSM8K是一个由人类问题编写者创建的8.5千个高质量语言多样性的小学数学文字问题数据集。该数据集被分为7.5千个训练问题和1千个测试问题。这些问题需要2到8步解决，解决方案主要涉及执行一系列基础运算操作（+ − ×÷）的基本计算，以得出最终答案。一个聪明的中学生应该能够解决每一个问题。它可用于多步数学推理。",
+                "citation":"@article{cobbe2021gsm8k,\n  title={Training Verifiers to Solve Math Word Problems},\n  author={Cobbe, Karl and Kosaraju, Vineet and Bavarian, Mohammad and Chen, Mark and Jun, Heewoo and Kaiser, Lukasz and Plappert, Matthias and Tworek, Jerry and Hilton, Jacob and Nakano, Reiichiro and Hesse, Christopher and Schulman, John},\n  journal={arXiv preprint arXiv:2110.14168},\n  year={2021}\n}\n",
+                "example":[{
+    "question": "A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?",
+    "answer": "It takes 2/2=<<2/2=1>>1 bolt of white fiber\nSo the total amount of fabric is 2+1=<<2+1=3>>3 bolts of fabric\n#### 3"
+}
+]
             },
             {
                 "name":"MATH",
@@ -502,12 +519,18 @@
                 "contributors":"problem setters",
                 "year":"before 2021",
                 "language":"synthetic",
-                "description":"The MATH benchmark for measuring mathematical problem solving on competition math problems with chain-of-thought style reasoning.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"MATH基准测试，用于通过思维链的推理来衡量竞赛数学问题上的数学问题解决能力。",
+                "detail":"MATH 是一个多模态数学推理任务，要求根据给定的问题和图像，生成正确的数学表达式。这个任务是为了测试模型在结合自然语言和图像信息进行数学推理方面的能力。这个数据集包含了10000个训练样本，1000个开发样本和1000个测试样本，所有的文本都是英文文本。",
+                "citation":"@article{hendrycksmath2021,\n  title={Measuring Mathematical Problem Solving With the MATH Dataset},\n  author={Dan Hendrycks and Collin Burns and Saurav Kadavath and Akul Arora and Steven Basart and Eric Tang and Dawn Song and Jacob Steinhardt},\n  journal={NeurIPS},\n  year={2021}\n}\n",
+                "example":[{
+    "modeling/MATH/data/test/number_theory_170.json": {
+        "problem": "If the pattern shown continues, what is the letter in the $2010$th position? MATHLETEMATHLETEMATHLETE...",
+        "level": "Level 2",
+        "type": "Number Theory",
+        "solution": "The pattern repeats with every 8 letters, so we can determine the letter in the $n$th position by finding the remainder when $n$ is divided by 8.  We can check that 2008 is a multiple of 8. That means 2010 has a remainder of 2 when divided by 8. The letter in the $2010$th position will be the same as the letter in the second position of the pattern, which is $\\boxed{A}$."
+    }
+}
+]
             },
             {
                 "name":"LegalBench",
@@ -518,12 +541,15 @@
                 "contributors":"lawyers",
                 "year":"before 2023",
                 "language":"English",
-                "description":"LegalBench is a large collaboratively constructed benchmark of legal reasoning tasks.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"LegalBench是一个大型协作构建的法律推理任务基准测试。",
+                "detail":"LegalBench项目是一个持续的开放科学努力，旨在协作策划任务以评估英语大型语言模型（LLMs）中的法律推理能力。目前，该基准测试包含来自40位贡献者收集的162个任务。",
+                "citation":"@misc{guha2023legalbench,\n      title={LegalBench: A Collaboratively Built Benchmark for Measuring Legal Reasoning in Large Language Models}, \n      author={Neel Guha and Julian Nyarko and Daniel E. Ho and Christopher Ré and Adam Chilton and Aditya Narayana and Alex Chohlas-Wood and Austin Peters and Brandon Waldon and Daniel N. Rockmore and Diego Zambrano and Dmitry Talisman and Enam Hoque and Faiz Surani and Frank Fagan and Galit Sarfaty and Gregory M. Dickinson and Haggai Porat and Jason Hegland and Jessica Wu and Joe Nudell and Joel Niklaus and John Nay and Jonathan H. Choi and Kevin Tobia and Margaret Hagan and Megan Ma and Michael Livermore and Nikon Rasumov-Rahe and Nils Holzenberger and Noam Kolt and Peter Henderson and Sean Rehaag and Sharad Goel and Shang Gao and Spencer Williams and Sunny Gandhi and Tom Zur and Varun Iyer and Zehua Li},\n      year={2023},\n      eprint={2308.11462},\n      archivePrefix={arXiv},\n      primaryClass={cs.CL}\n}",
+                "example":[{
+  "text": "The mark \"Ivory\" for a product made of elephant tusks.",
+  "label": "generic",
+  "idx": 0
+}
+]
             },
             {
                 "name":"MedQA",
@@ -534,12 +560,10 @@
                 "contributors":"problem setters",
                 "year":"before 2020",
                 "language":"English",
-                "description":"MedQA is an open domain question answering dataset composed of questions from professional medical board exams.",
-                "detail":"",
-                "citation":"",
-                "example":[
-
-                ]
+                "description":"MedQA是一个开放领域问答数据集，由专业医学委员会考试中的问题组成。",
+                "detail":"\nMedQA数据集是一个用于评估医学领域自然语言处理和问答系统的数据集。这个数据集特别设计用于测试模型在医学领域的理解和推理能力。MedQA包含了大量的医学问题及其答案，这些问题通常涉及疾病诊断、治疗方法、药物作用机制等医学知识。",
+                "citation":"@article{jin2021disease,\n  title={What disease does this patient have? a large-scale open domain question answering dataset from medical exams},\n  author={Jin, Di and Pan, Eileen and Oufattole, Nassim and Weng, Wei-Hung and Fang, Hanyi and Szolovits, Peter},\n  journal={Applied Sciences},\n  volume={11},\n  number={14},\n  pages={6421},\n  year={2021},\n  publisher={MDPI}\n}\n",
+                "example":[{"question": "卧位腰椎穿刺，脑脊液压力正常值是（　　）。", "options": {"A": "190～220mmH2O（1.86～2.16kPa）", "B": "80～180mmH2O（0.78～1.76kPa）", "C": "50～70mmH2O（0.49～0.69kPa）", "D": "230～250mmH2O（2.25～2.45kPa）", "E": "260～280mmH2O（2.55～2.74kPa）"}, "answer": "80～180mmH2O（0.78～1.76kPa）", "meta_info": "第三部分　精神神经系统疾病", "answer_idx": "B"}]
             },
             {
                 "name":"WMT 2014",
@@ -551,8 +575,8 @@
                 "year":"before 2014",
                 "languages":"English, French, Czech, etc.",
                 "description":"The WMT 2014 benchmark for machine translation.",
-                "detail":"",
-                "citation":"",
+                "detail":"WMT 2014是用于第九届统计机器翻译研讨会共享任务的数据集合集。该研讨会设有四项任务：\n\n1. 新闻翻译任务，\n2. 质量评估任务，\n3. 指标任务，\n4. 医学文本翻译任务。",
+                "citation":"\n@InProceedings{bojar-EtAl:2014:W14-33,\n  author    = {Bojar, Ondrej  and  Buck, Christian  and  Federmann, Christian  and  Haddow, Barry  and  Koehn, Philipp  and  Leveling, Johannes  and  Monz, Christof  and  Pecina, Pavel  and  Post, Matt  and  Saint-Amand, Herve  and  Soricut, Radu  and  Specia, Lucia  and  Tamchyna, Ale\n{s}},\n  title     = {Findings of the 2014 Workshop on Statistical Machine Translation},\n  booktitle = {Proceedings of the Ninth Workshop on Statistical Machine Translation},\n  month     = {June},\n  year      = {2014},\n  address   = {Baltimore, Maryland, USA},\n  publisher = {Association for Computational Linguistics},\n  pages     = {12--58},\n  url       = {http://www.aclweb.org/anthology/W/W14/W14-3302}\n}\n",
                 "example":[
 
                 ]
