@@ -8,11 +8,13 @@ import json
 import os
 import random
 import time
+import gc
 
 import shortuuid
 import torch
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
+from vllm.model_executor.parallel_utils.parallel_state import destroy_model_parallel
 
 from fastchat.llm_judge.common import load_questions, temperature_config
 from fastchat.model import load_model, get_conversation_template
@@ -22,34 +24,58 @@ from modelscope import GenerationConfig
 
 
 def run_eval(
-        model_path,
-        model_id,
-        question_file,
-        question_begin,
-        question_end,
-        answer_file,
-        max_new_token,
-        num_choices,
-        num_gpus_per_model,
-        num_gpus_total,
-        max_gpu_memory,
-        dtype,
-):
+        model_path: object,
+        model_id: object,
+        question_file: object,
+        question_begin: object,
+        question_end: object,
+        answer_file: object,
+        max_new_token: object,
+        num_choices: object,
+        num_gpus_per_model: object,
+        num_gpus_total: object,
+        max_gpu_memory: object,
+        dtype: object,
+        revision: object,
+        cache_dir: object = "/root/autodl-tmp/model",
+) -> object:
     questions = load_questions(question_file, question_begin, question_end)
     # random shuffle the questions to balance the loading
     random.shuffle(questions)
     
     # Split the question file into `num_gpus` files
     assert num_gpus_total % num_gpus_per_model == 0
-    get_model_answers(model_path,
-                      model_id,
-                      questions,
-                      answer_file,
-                      max_new_token,
-                      num_choices,
-                      num_gpus_per_model,
-                      max_gpu_memory,
-                      dtype=dtype)
+
+    use_ray = num_gpus_total // num_gpus_per_model > 1
+
+    if use_ray:
+        get_answers_func = ray.remote(num_gpus=num_gpus_per_model)(
+            get_model_answers
+        ).remote
+    else:
+        get_answers_func = get_model_answers
+
+    chunk_size = len(questions) // (num_gpus_total // num_gpus_per_model)
+    ans_handles = []
+    for i in range(0, len(questions), chunk_size):
+        ans_handles.append(
+            get_answers_func(
+                model_path,
+                model_id,
+                questions[i : i + chunk_size],
+                answer_file,
+                max_new_token,
+                num_choices,
+                num_gpus_per_model,
+                max_gpu_memory,
+                dtype=dtype,
+                revision=revision,
+                cache_dir=cache_dir,
+            )
+        )
+
+    if use_ray:
+        ray.get(ans_handles)
 
 
 @torch.inference_mode()
@@ -63,13 +89,20 @@ def get_model_answers(
         num_gpus_per_model,
         max_gpu_memory,
         dtype,
+        revision,
+        cache_dir="/root/autodl-tmp/model",
 ):
-    print("model_path:", model_path)
-    model_dir = snapshot_download(model_path, cache_dir="/root/autodl-tmp/model")
+    print("model_path:", model_path, "model_id:", model_id, "revision:", revision)
+    try:
+        model_dir = snapshot_download(model_path, cache_dir=cache_dir, revision=revision, local_files_only=True)
+    except ValueError:
+        model_dir = snapshot_download(model_path, cache_dir=cache_dir, revision=revision,
+                                      local_files_only=False)
     print("model_dir:", model_dir)
     # llm = LLM(model=model_dir, trust_remote_code=True)
-    llm = LLM(model="/root/autodl-tmp/model/" + model_path, trust_remote_code=True)
+    llm = LLM(model=model_dir, trust_remote_code=True)
     prompts = []
+
     for question in tqdm(questions):
         conv = get_conversation_template(model_id)
         qs = '\n'.join(question["turns"])
@@ -84,9 +117,8 @@ def get_model_answers(
     print("len of prompts: ", len(prompts), len(outputs))
     for idx, (question, output) in enumerate(zip(questions, outputs)):
         prompt = output.prompt
+        qs = '\n'.join(question["turns"])
         generated_text = output.outputs[0].text
-        # print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
-
         os.makedirs(os.path.dirname(answer_file), exist_ok=True)
         with open(os.path.expanduser(answer_file), "a") as fout:
             ans_json = {
@@ -98,9 +130,15 @@ def get_model_answers(
                 "question_type": question["question_type"],
                 "category": question['category'],
                 "prompt": prompt,
+                "question": qs,
                 "tstamp": time.time(),
             }
             fout.write(json.dumps(ans_json, ensure_ascii=False) + "\n")
+
+    destroy_model_parallel()
+    del llm
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 def reorg_answer_file(answer_file):
@@ -176,6 +214,12 @@ if __name__ == "__main__":
         help="Override the default dtype. If not set, it will use float16 on GPU and float32 on CPU.",
         default=None,
     )
+    parser.add_argument(
+        "--revision",
+        type=str,
+        default="main",
+        help="The model revision to load.",
+    )
     
     args = parser.parse_args()
     
@@ -205,6 +249,7 @@ if __name__ == "__main__":
         num_gpus_total=args.num_gpus_total,
         max_gpu_memory=args.max_gpu_memory,
         dtype=str_to_torch_dtype(args.dtype),
+        revision=args.revision,
     )
     
     reorg_answer_file(answer_file)
