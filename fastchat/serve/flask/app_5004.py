@@ -130,14 +130,14 @@ def get_modelpage_detail():
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
     
-    ability_scores = overall_report[MODEL_ID]["score_per_category"]
-    ability_scores_array = []
-    for ability, scores in ability_scores.items():
-        ability_scores_array.append({"ability": ability, **scores})
-
     if MODEL_ID not in overall_report:
         return jsonify({"error": f"Model ID '{MODEL_ID}' not found in the report", "code": "ModelNotFound"}), 404
     else:
+        ability_scores = overall_report[MODEL_ID]["score_per_category"]
+        ability_scores_array = []
+        for ability, scores in ability_scores.items():
+            ability_scores_array.append({"ability": ability, **scores})
+    
         scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
         data_id_scores = []
         for data_id, scores in scores_per_data_id.items():
