@@ -110,7 +110,6 @@ def get_modelpage_list():
     request_id = random_uuid()
     result = MODEL_JSON.copy()
     result.update({"request_id": request_id})
-    model_sizes = []
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -135,24 +134,27 @@ def get_modelpage_detail():
     ability_scores_array = []
     for ability, scores in ability_scores.items():
         ability_scores_array.append({"ability": ability, **scores})
-    
-    scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
-    data_id_scores = []
-    for data_id, scores in scores_per_data_id.items():
-        data_id_scores.append(
-            {"data_id": data_id, "score": scores["correct"], "total": scores["total"], "accuracy": scores["accuracy"]})
-    result = {
-        "request_id": str(request_id),
-        "model_id": MODEL_ID,
-        "score": overall_report[MODEL_ID]["score_total"],
-        "correct": overall_report[MODEL_ID]["total_correct"],
-        "total": overall_report[MODEL_ID]["total_questions"],
-        "ability_scores": ability_scores_array,
-        "data_id_scores": data_id_scores,
-        "model_description": MODEL_DICT.get(MODEL_ID, {}),
-        "report": report
-    }
-    return json.dumps(result, ensure_ascii=False)
+
+    if MODEL_ID not in overall_report:
+        return jsonify({"error": f"Model ID '{MODEL_ID}' not found in the report", "code": "ModelNotFound"}), 404
+    else:
+        scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
+        data_id_scores = []
+        for data_id, scores in scores_per_data_id.items():
+            data_id_scores.append(
+                {"data_id": data_id, "score": scores["correct"], "total": scores["total"], "accuracy": scores["accuracy"]})
+        result = {
+            "request_id": str(request_id),
+            "model_id": MODEL_ID,
+            "score": overall_report[MODEL_ID]["score_total"],
+            "correct": overall_report[MODEL_ID]["total_correct"],
+            "total": overall_report[MODEL_ID]["total_questions"],
+            "ability_scores": ability_scores_array,
+            "data_id_scores": data_id_scores,
+            "model_description": MODEL_DICT.get(MODEL_ID, {}),
+            "report": report
+        }
+        return json.dumps(result, ensure_ascii=False)
 
 
 @app.route('/get_datapage_list', methods=['POST'])
