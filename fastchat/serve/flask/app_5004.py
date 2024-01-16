@@ -7,6 +7,7 @@ from pprint import pprint
 import pandas as pd
 from io import StringIO
 
+import torch
 from flask import Flask, request, jsonify
 import subprocess
 import random
@@ -368,6 +369,11 @@ def run_evaluate():
                         print("eval model error:", model_name, model_id)
                         print(e)
                         failed.append({"model_id": model_id, "reason": str(e)})
+                        continue
+                    except torch.cuda.OutOfMemoryError as e1:
+                        print("eval model error:", model_name, model_id)
+                        print(e1)
+                        failed.append({"model_id": model_id, "reason": str(e1)})
                         continue
                 temp = {"data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
