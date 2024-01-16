@@ -94,11 +94,11 @@ def get_total_scores(model_scores):
 
 
 def get_report_by_names(request_id, data_ids, model_names):
-    report = calculate_model_scores(data_ids)
+    report_per_model, report_per_data = calculate_model_scores2("moral_bench_test5")
     categories = ['合规性', '公平性', '知识产权', '隐私保护', '可信度']
     header = ['Model ID', 'Total Score'] + categories + ["Evaluate Time", "Report"]
     leaderboard = [header]
-    for model, model_data in report.items():
+    for model, model_data in report_per_model.items():
         if model not in model_names:
             print("model not in model_names:", model, model_names)
             continue
@@ -119,6 +119,19 @@ def get_report_by_names(request_id, data_ids, model_names):
             row.append(report)
             leaderboard.append(row)
     return json.dumps({"request_id": request_id, "leaderboard": leaderboard}, ensure_ascii=False)
+
+
+def get_report_all():
+    report_per_model, report_per_data = calculate_model_scores2("moral_bench_test5")
+    result = {}
+    for model, model_data in report_per_model.items():
+        total_correct = model_data['total_correct']
+        total_questions = model_data['total_questions']
+        total_score = total_correct / total_questions if total_questions > 0 else 0
+        report = get_cache()
+        model_data.update({"Total Score": total_score, "Report": report, "Evaluate Time": get_end_time()})
+        result.update({model: model_data})
+    return result
 
 
 def random_uuid() -> str:
@@ -224,48 +237,49 @@ def get_leaderboard_detail():
     model_sizes = filter_params.get('model_sizes', None)
     datasets = filter_params.get('datasets', None)
     print("categories:", categories, "model_sizes:", model_sizes, "datasets:", datasets)
-    selected_header = [cate for cate in CATEGORY if cate in categories]
-    all_data = []
-    
-    filtered_data = all_data.copy()
+    filtered_cates = CATEGORY.copy()
+    if categories is not None:
+        filtered_cates = [cate for cate in CATEGORY if cate in categories]
+    filtered_models = [model["name"].split('/')[-1] for model in MODEL_JSON["models"]]
     if model_sizes is not None:
-        filtered_data = [model for model in all_data if
-                         (not model_sizes or model['参数量'] in model_sizes)]
-    if datasets is not None:
-        filtered_data = [model for model in all_data if
-                         (not datasets or model['数据集'] in filtered_data)]
+        filtered_models = [model for model in filtered_models if model in model_sizes]
+    filtered_data = ["moral_bench_test5"]
+    print("filtered_cates:", filtered_cates, "filtered_models:", filtered_models, "filtered_data:", filtered_data)
+    
+    report_per_model, report_per_data = calculate_model_scores2("moral_bench_test5")
     aggregated_scores = {}
-    for model in filtered_data:
-        model_name = model['模型']
-        if model_name not in aggregated_scores:
+    for model_name in filtered_models:
+        if model_name not in report_per_model:
+            print("model_name not in report_per_model:", model_name)
+            continue
+        else:
+            model_data = report_per_model[model_name]
             aggregated_scores[model_name] = {category: 0 for category in categories}
             aggregated_scores[model_name]['count'] = 0
-            aggregated_scores[model_name]["发布日期"] = model["发布日期"]
-            aggregated_scores[model_name]["类型"] = model["类型"]
-            aggregated_scores[model_name]["参数量"] = model["参数量"]
-        
-        for category in categories:
-            aggregated_scores[model_name][category] += model[category]
-        
-        aggregated_scores[model_name]['count'] += 1
     
+            for category in categories:
+                category_score = model_data['score_per_category'].get(category, {})
+                aggregated_scores[model_name][category] = category_score.get('accuracy', 0)
+
+            aggregated_scores[model_name]['count'] = model_data['total_questions']
+
+    print("aggregated_scores:", aggregated_scores)
+
     final_data = []
     for model_name, scores in aggregated_scores.items():
-        avg_scores = {cat: scores[cat] / scores['count'] for cat in categories}
-        final_data.append({
-            "模型": model_name,
-            "发布日期": scores["发布日期"],
-            "类型": scores["类型"],
-            "参数量": scores["参数量"],
-            "综合": sum(avg_scores.values()) / len(categories),
-            **avg_scores
-        })
-    
+        if model_name in filtered_models:
+            avg_scores = {cat: scores[cat] for cat in categories}
+            final_data.append({
+                "模型": model_name,
+                "综合": sum(avg_scores.values()) / len(categories),
+                **avg_scores
+            })
+    print("final_data:", final_data)
     result = {
         "request_id": str(uuid.uuid4()),
         "header": [
-                      "模型", "发布日期", "类型", "参数量", "综合"
-                  ] + selected_header,
+                      "模型", "综合"
+                  ] + categories,
         "data": final_data
     }
     return json.dumps(result, ensure_ascii=False)
