@@ -749,6 +749,7 @@
                 "url": "https://huggingface.co/datasets/wmt14",
                 "category": "基础能力"
             }
+    ]
     },
     {
         "category": "抗干扰性",
