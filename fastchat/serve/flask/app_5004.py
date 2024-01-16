@@ -17,7 +17,7 @@ import datetime
 import pytz
 
 from fastchat.llm_judge.gen_model_answer import run_eval
-from fastchat.serve.flask.utils import calculate_model_scores, read_jsonl_files
+from fastchat.serve.flask.utils import calculate_model_scores, read_jsonl_files, calculate_model_scores2
 from fastchat.utils import str_to_torch_dtype
 from flask_utils import get_free_gpus, append_dict_to_jsonl, get_end_time, get_start_time
 from fastchat.llm_judge.report.assist1 import generate_report, get_system_prompt, get_cache
@@ -41,6 +41,23 @@ BASE_PATH = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__fi
 print("BASE_PATH:", BASE_PATH)
 print("DATA_PATH:", DATA_PATH)
 print("MODEL_PATH:", MODEL_PATH)
+RENAME_DATA = {
+    'political_ethics_dataset': '政治伦理',
+    'economic_ethics_dataset': '经济伦理',
+    'social_ethics_dataset': '社会伦理',
+    'cultural_ethics_dataset': '文化伦理',
+    'technology_ethics_dataset': '科技伦理',
+    'environmental_ethics_dataset': '环境伦理',
+    'medical_ethics_dataset': '医疗健康伦理',
+    'education_ethics_dataset': '教育伦理',
+    'professional_ethics_dataset': '职业道德伦理',
+    'cyber_information_ethics_dataset': '网络伦理',
+    'international_relations_ethics_dataset': '国际关系与全球伦理',
+    'psychology_ethics_dataset': '心理伦理',
+    'bioethics_dataset': '生物伦理学',
+    'sports_ethics_dataset': '运动伦理学',
+    'military_ethics_dataset': '军事伦理'
+}
 
 
 def generate_random_model_id():
@@ -132,7 +149,7 @@ def get_modelpage_detail():
     print("model_id:", MODEL_ID, "data_ids:", DATA_IDS)
     overall_report = calculate_model_scores(DATA_IDS)
     print("overall_report:", overall_report)
-    sys_prompt = get_system_prompt()
+    # sys_prompt = get_system_prompt()
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
     
@@ -179,14 +196,18 @@ def get_datapage_detail():
     if not all(key in data for key in ['data_id']):
         return jsonify({"error": "Missing required fields in the request"}), 400
     DATA_ID = data.get('data_id')
+    DATA_RENAME = RENAME_DATA.get(DATA_ID, None)
+    if DATA_RENAME is None:
+        return jsonify({"error": f"Data ID '{DATA_ID}' not found in the report", "code": "DataNotFound"}), 404
     # DATA_ID = "moral_bench_test1"
-    overall_report = calculate_model_scores([DATA_ID])
+    report_per_model, report_per_data = calculate_model_scores2("moral_bench_test4")
+    
     result = {
         "request_id": request_id,
         "data_id": DATA_ID,
         "data_description": DATA_DICT.get(DATA_ID, {}),
-        "score": {model: item["score_total"] for model, item in overall_report.items()},
-        "model_ids": list(overall_report.keys()),
+        "score": report_per_data.get(DATA_RENAME, 0),
+        "model_ids": list(report_per_model.keys()),
     }
     return json.dumps(result, ensure_ascii=False)
 
