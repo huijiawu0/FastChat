@@ -34,7 +34,7 @@ DATA_IDS = [dataset["data_id"] for dataset in DATA_JSON[0]["datasets"]]
 MODEL_PATH = os.path.join(app_dir, 'resources', 'model_config.json')
 with open(MODEL_PATH) as file:
     MODEL_JSON = json.load(file)
-MODEL_DICT = {model["model_id"]: model for model in MODEL_JSON["models"]}
+MODEL_DICT = {model["model_name"]: model for model in MODEL_JSON["models"]}
 MODEL_NAMES = [model['name'] for model in MODEL_JSON["models"]]
 MODEL_IDS = [model['model_id'] for model in MODEL_JSON["models"]]
 BASE_PATH = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -140,28 +140,30 @@ def get_modelpage_list():
 def get_modelpage_detail():
     request_id = random_uuid()
     data = request.json
-    if not all(key in data for key in ['model_id']):
+    if not all(key in data for key in ['model_name']):
         return jsonify({"error": "Missing required fields in the request"}), 400
     
-    MODEL_ID = data.get('model_id')
+    MODEL_NAME = data.get('model_NAME')
     DATA_IDS = list(DATA_DICT.keys())
-    # DATA_IDS.extend(["moral_bench_test1", "moral_bench_test2"])
-    print("model_id:", MODEL_ID, "data_ids:", DATA_IDS)
-    overall_report = calculate_model_scores(DATA_IDS)
-    print("overall_report:", overall_report)
+    print("model_name:", MODEL_NAME, "data_ids:", DATA_IDS)
+    # overall_report = calculate_model_scores(DATA_IDS)
+    report_per_model, report_per_data = calculate_model_scores2("moral_bench_test5")
+    print("report_per_model:", report_per_model)
+    print("report_per_data:", report_per_data)
     # sys_prompt = get_system_prompt()
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
-    
-    if MODEL_ID not in overall_report:
-        return jsonify({"error": f"Model ID '{MODEL_ID}' not found in the report", "code": "ModelNotFound"}), 404
+
+    MODEL_NAME = MODEL_NAME.split('/')[-1] if MODEL_NAME not in report_per_model else MODEL_NAME
+    if MODEL_NAME not in report_per_model:
+        return jsonify({"error": f"Model NAME '{MODEL_NAME}' not found in the report", "code": "ModelNotFound"}), 404
     else:
-        ability_scores = overall_report[MODEL_ID]["score_per_category"]
+        ability_scores = report_per_model[MODEL_NAME]["score_per_category"]
         ability_scores_array = []
         for ability, scores in ability_scores.items():
             ability_scores_array.append({"ability": ability, **scores})
         
-        scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
+        scores_per_data_id = report_per_model[MODEL_NAME]["scores_per_data_id"]
         data_id_scores = []
         for data_id, scores in scores_per_data_id.items():
             data_id_scores.append(
@@ -169,13 +171,13 @@ def get_modelpage_detail():
                  "accuracy": scores["accuracy"]})
         result = {
             "request_id": str(request_id),
-            "model_id": MODEL_ID,
-            "score": overall_report[MODEL_ID]["score_total"],
-            "correct": overall_report[MODEL_ID]["total_correct"],
-            "total": overall_report[MODEL_ID]["total_questions"],
+            "model_name": MODEL_NAME,
+            "score": report_per_model[MODEL_NAME]["score_total"],
+            "correct": report_per_model[MODEL_NAME]["total_correct"],
+            "total": report_per_model[MODEL_NAME]["total_questions"],
             "ability_scores": ability_scores_array,
             "data_id_scores": data_id_scores,
-            "model_description": MODEL_DICT.get(MODEL_ID, {}),
+            "model_description": MODEL_DICT.get(MODEL_NAME, {}),
             "report": report
         }
         return json.dumps(result, ensure_ascii=False)
