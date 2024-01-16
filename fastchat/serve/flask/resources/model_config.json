@@ -127,7 +127,7 @@
             "training_tokens": "2.6T",
             "max_length": "4K",
             "commercial_use": "可商用",
-            "url": "https://github.com/baichuan-inc/Baichuan2?tab=readme-ov-file",
+            "url": "https://github.com/baichuan-inc/Baichuan2-13B?tab=readme-ov-file",
             "description": "Baichuan2-13B-Chat为Baichuan-13B系列模型中对齐后的版本。"
         },
         {

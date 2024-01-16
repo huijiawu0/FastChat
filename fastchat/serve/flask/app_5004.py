@@ -74,7 +74,8 @@ def get_total_scores(model_scores):
 
 def get_report_by_ids(request_id, data_ids, model_ids):
     report = calculate_model_scores(data_ids)
-    header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
+    categories = ['合规性', '公平性', '知识产权', '隐私保护', '可信度']
+    header = ['Model ID', 'Total Score'] + categories + ["Evaluate Time", "Report"]
     leaderboard = [header]
     for model, model_data in report.items():
         if model not in model_ids:
@@ -86,10 +87,10 @@ def get_report_by_ids(request_id, data_ids, model_ids):
             total_questions = model_data['total_questions']
             total_score = total_correct / total_questions if total_questions > 0 else 0
             row.append(total_score)
-            for data_id in data_ids:
-                score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
-                category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
-                    if score_per_data_id['total'] > 0 else 0
+            for category in categories:
+                score_per_category_id = model_data['score_per_category'].get(category, {"correct": 0, "total": 0})
+                category_score = score_per_category_id['correct'] / score_per_category_id['total'] \
+                    if score_per_category_id['total'] > 0 else 0
                 row.append(category_score)
             # report = get_cache()
             report = ""
@@ -297,6 +298,10 @@ def get_report():
         return jsonify({"error": f"No evaluation results found by request_id {request_id}"}), 400
 
 
+def is_non_empty_file(file_path):
+    return os.path.isfile(file_path) and os.path.getsize(file_path) > 0
+
+
 @app.route('/run_evaluate', methods=['POST'])
 def run_evaluate():
     request_id = random_uuid()
@@ -313,7 +318,7 @@ def run_evaluate():
     if len(model_names) != len(model_ids):
         print(model_names, model_ids)
         return jsonify({"error": "model_names and model_ids should have the same length"}), 400
-    
+
     revision = data.get('revision', None)
     question_begin = data.get('question_begin', None)
     question_end = data.get('question_end', None)
@@ -338,21 +343,26 @@ def run_evaluate():
             for model_name, model_id in zip(model_names, model_ids):
                 output_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "model_answer",
                                            f"{model_id}.jsonl")
-                try:
-                    run_eval(
-                        ray=ray,
-                        model_path=model_name, model_id=model_id, question_file=question_file,
-                        question_begin=question_begin, question_end=question_end,
-                        answer_file=output_file, max_new_token=max_new_token,
-                        num_choices=num_choices, num_gpus_per_model=num_gpus_per_model,
-                        num_gpus_total=num_gpus_total, max_gpu_memory=max_gpu_memory,
-                        dtype=dtype, revision=revision, cache_dir=cache_dir
-                    )
-                except AttributeError as e:
-                    print("eval model error:", model_name, model_id)
-                    print(e)
-                    failed.append({"model_id": model_id, "reason": str(e)})
-                    continue
+                
+                if is_non_empty_file(output_file):
+                    print(
+                        f"Skipping model_id {model_id} for data_id {data_id} as output file already exists and is non-empty.")
+                else:
+                    try:
+                        run_eval(
+                            ray=ray,
+                            model_path=model_name, model_id=model_id, question_file=question_file,
+                            question_begin=question_begin, question_end=question_end,
+                            answer_file=output_file, max_new_token=max_new_token,
+                            num_choices=num_choices, num_gpus_per_model=num_gpus_per_model,
+                            num_gpus_total=num_gpus_total, max_gpu_memory=max_gpu_memory,
+                            dtype=dtype, revision=revision, cache_dir=cache_dir
+                        )
+                    except AttributeError as e:
+                        print("eval model error:", model_name, model_id)
+                        print(e)
+                        failed.append({"model_id": model_id, "reason": str(e)})
+                        continue
                 temp = {"data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
