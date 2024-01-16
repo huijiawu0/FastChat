@@ -22,9 +22,7 @@ with open('temp_v18_gpt-3.5-turbo-1106_prompt_v7_system.jsonl', 'r') as f, open(
                 "category": category,
                 "turns": ["%s\n%s" % (q, options)],
                 "reference_answer": result['reference_answer'],
-                "question_type": result['question_type'],
-                "field": field,
-                "law": law
+                "question_type": result['question_type']
             }
             g.write(json.dumps(dd, ensure_ascii=False) + '\n')
             cnt += 1
