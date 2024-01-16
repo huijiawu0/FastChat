@@ -181,19 +181,6 @@
             "commercial_use": "可商用",
             "url": "https://github.com/QwenLM/Qwen",
             "description": "通义千问-14B（Qwen-14B）是阿里云研发的通义千问大模型系列的140亿参数规模的模型。在Qwen-14B的基础上，阿里云使用对齐机制打造了基于大语言模型的AI助手Qwen-14B-Chat。"
-        },
-        {
-            "model_id": "qwen-7b-chat",
-            "name": "qwen/Qwen-72B-Chat",
-            "promulgator": "阿里云",
-            "date": "2023年11月30日",
-            "country": "国内",
-            "parameters_size": "72B",
-            "training_tokens": "3T",
-            "max_length": "32K",
-            "commercial_use": "可商用",
-            "url": "https://github.com/QwenLM/Qwen",
-            "description": "通义千问-72B（Qwen-72B）是阿里云研发的通义千问大模型系列的720亿参数规模的模型。在Qwen-72B的基础上，阿里云使用对齐机制打造了基于大语言模型的AI助手Qwen-72B-Chat。"
         }
     ]
 }

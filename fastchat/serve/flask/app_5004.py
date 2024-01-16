@@ -132,7 +132,7 @@ def get_modelpage_detail():
     print("model_id:", MODEL_ID, "data_ids:", DATA_IDS)
     overall_report = calculate_model_scores(DATA_IDS)
     print("overall_report:", overall_report)
-    # sys_prompt = get_system_prompt()
+    sys_prompt = get_system_prompt()
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
     
@@ -348,9 +348,7 @@ def run_evaluate():
             question_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "question.jsonl")
             for model_name, model_id in zip(model_names, model_ids):
                 model_name_saved = model_name.split('/')[-1]
-                output_file = os.path.join("llm_judge", "data", str(data_id), "model_answer",
-                                           f"{model_name_saved}.jsonl")
-                
+                output_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "model_answer", f"{model_name_saved}.jsonl")
                 if is_non_empty_file(output_file):
                     print(
                         f"Skipping model_id {model_id} for data_id {data_id} as output file already exists and is non-empty.")
