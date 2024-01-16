@@ -200,7 +200,7 @@ def get_datapage_detail():
     if DATA_RENAME is None:
         return jsonify({"error": f"Data ID '{DATA_ID}' not found in the report", "code": "DataNotFound"}), 404
     # DATA_ID = "moral_bench_test1"
-    report_per_model, report_per_data = calculate_model_scores2("moral_bench_test4")
+    report_per_model, report_per_data = calculate_model_scores2("moral_bench_test5")
     
     result = {
         "request_id": request_id,
