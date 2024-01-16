@@ -91,7 +91,8 @@ def get_report_by_ids(request_id, data_ids, model_ids):
                 category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
                     if score_per_data_id['total'] > 0 else 0
                 row.append(category_score)
-            report = get_cache()
+            # report = get_cache()
+            report = ""
             row.append(get_end_time())
             row.append(report)
             leaderboard.append(row)
@@ -290,6 +291,7 @@ def get_report():
     if evaluation_results is not None:
         data_ids = evaluation_results["data_ids"]
         model_ids = evaluation_results["model_ids"]
+        print(__name__, "data_ids:", data_ids, "model_ids:", model_ids)
         return get_report_by_ids(request_id, data_ids, model_ids)
     else:
         return jsonify({"error": f"No evaluation results found by request_id {request_id}"}), 400
