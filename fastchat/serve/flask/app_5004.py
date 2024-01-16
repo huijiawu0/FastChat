@@ -76,14 +76,14 @@ def get_total_scores(model_scores):
     return total_scores
 
 
-def get_report_by_ids(request_id, data_ids, model_ids):
+def get_report_by_names(request_id, data_ids, model_names):
     report = calculate_model_scores(data_ids)
     categories = ['合规性', '公平性', '知识产权', '隐私保护', '可信度']
     header = ['Model ID', 'Total Score'] + categories + ["Evaluate Time", "Report"]
     leaderboard = [header]
     for model, model_data in report.items():
-        if model not in model_ids:
-            print("model not in model_ids:", model, model_ids)
+        if model not in model_names:
+            print("model not in model_names:", model, model_names)
             continue
         else:
             row = [model]
@@ -295,9 +295,9 @@ def get_report():
     print("evaluation_results:", evaluation_results)
     if evaluation_results is not None:
         data_ids = evaluation_results["data_ids"]
-        model_ids = evaluation_results["model_ids"]
-        print(__name__, "data_ids:", data_ids, "model_ids:", model_ids)
-        return get_report_by_ids(request_id, data_ids, model_ids)
+        model_names = [model_name.split('/')[-1] for model_name in evaluation_results["model_names"]]
+        print(__name__, "data_ids:", data_ids, "model_names:", model_names)
+        return get_report_by_names(request_id, data_ids, model_names)
     else:
         return jsonify({"error": f"No evaluation results found by request_id {request_id}"}), 400
 
