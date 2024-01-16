@@ -124,7 +124,7 @@
             "date": "2023年12月29日",
             "country": "国内",
             "parameters_size": "13B",
-            "training_tokens": "1.4T",
+            "training_tokens": "2.6T",
             "max_length": "4K",
             "commercial_use": "可商用",
             "url": "https://github.com/baichuan-inc/Baichuan2-13B?tab=readme-ov-file",
