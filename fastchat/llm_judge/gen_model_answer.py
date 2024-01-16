@@ -103,7 +103,7 @@ def get_model_answers(
     # llm = LLM(model=model_dir, trust_remote_code=True)
     try:
         llm = LLM(model=model_dir, trust_remote_code=True)
-    except (ModuleNotFoundError, AttributeError) as e:
+    except (ModuleNotFoundError, AttributeError, torch.cuda.OutOfMemoryError) as e:
         print(e)
         destroy_model_parallel()
         if 'llm' in locals():
