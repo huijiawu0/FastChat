@@ -297,6 +297,10 @@ def get_report():
         return jsonify({"error": f"No evaluation results found by request_id {request_id}"}), 400
 
 
+def is_non_empty_file(file_path):
+    return os.path.isfile(file_path) and os.path.getsize(file_path) > 0
+
+
 @app.route('/run_evaluate', methods=['POST'])
 def run_evaluate():
     request_id = random_uuid()
@@ -313,7 +317,7 @@ def run_evaluate():
     if len(model_names) != len(model_ids):
         print(model_names, model_ids)
         return jsonify({"error": "model_names and model_ids should have the same length"}), 400
-    
+
     revision = data.get('revision', None)
     question_begin = data.get('question_begin', None)
     question_end = data.get('question_end', None)
@@ -338,6 +342,11 @@ def run_evaluate():
             for model_name, model_id in zip(model_names, model_ids):
                 output_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "model_answer",
                                            f"{model_id}.jsonl")
+                
+                if is_non_empty_file(output_file):
+                    print(
+                        f"Skipping model_id {model_id} for data_id {data_id} as output file already exists and is non-empty.")
+                    continue
                 try:
                     run_eval(
                         ray=ray,
