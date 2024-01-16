@@ -105,19 +105,6 @@
             "description": "Mistral-7B-Instruct-v0.2 Large Language Model (LLM) 是 Mistral-7B-Instruct-v0.1 的改进微调版本。"
         },
         {
-            "model_id": "mistral-7b-openorca",
-            "name": "AI-ModelScope/Mixtral-8x7B-Instruct-v0.1",
-            "promulgator": "Mistral AI",
-            "date": "2023年11月11日",
-            "country": "国外",
-            "parameters_size": "8x7B",
-            "training_tokens": "8T",
-            "max_length": "32K",
-            "commercial_use": "可商用",
-            "url": "https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "description": "Mixtral-8x7B 大语言模型 (LLM) 是一种经过预训练的稀疏专家混合生成模型。在我们测试的大多数基准中，Mixtral-8x7B 的表现都优于 Llama 2 70B。"
-        },
-        {
             "model_id": "stable-vicuna",
             "name": "AI-ModelScope/Vicuna-7B",
             "promulgator": "lmsys",

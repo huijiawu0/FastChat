@@ -8,15 +8,19 @@ def read_rule(fn):
         rules = [line.replace("\u3000", "") for line in f.readlines()]
         return rules
 
+
 def read_prompt(fn):
     with open(fn, "r", encoding="utf-8") as f:
         prompt = ""
         for line in f.readlines():
             prompt += line
         return prompt
+
+
 model = "gpt-3.5-turbo-1106"
 user_prompt = read_prompt("prompt_v6.txt")
 client = OpenAI()
+
 
 def contains(s):
     first_10_chars = s[:10]
@@ -38,6 +42,8 @@ def get_response(model, user_prompt):
     except Exception as e:
         print("请求过程中发生错误:", e)
         return None
+
+
 def read_jsonl(filename):
     json_objects = []
     with open(filename, 'r', encoding='utf-8') as file:
@@ -45,6 +51,7 @@ def read_jsonl(filename):
             # 解析JSON并添加到列表中
             json_objects.append(json.loads(line))
     return json_objects
+
 
 def write_json(data, filename):
     try:
@@ -82,6 +89,7 @@ def main():
                             print("解析 JSON 时发生错误:", e)
                     rule_ = ""
                     q = 0
+
 
 if __name__ == "__main__":
     # items = os.listdir("./rules")

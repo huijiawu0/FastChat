@@ -91,7 +91,8 @@ def get_report_by_ids(request_id, data_ids, model_ids):
                 category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
                     if score_per_data_id['total'] > 0 else 0
                 row.append(category_score)
-            report = get_cache()
+            # report = get_cache()
+            report = ""
             row.append(get_end_time())
             row.append(report)
             leaderboard.append(row)
@@ -110,7 +111,6 @@ def get_modelpage_list():
     request_id = random_uuid()
     result = MODEL_JSON.copy()
     result.update({"request_id": request_id})
-    model_sizes = []
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -131,28 +131,31 @@ def get_modelpage_detail():
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
     
-    ability_scores = overall_report[MODEL_ID]["score_per_category"]
-    ability_scores_array = []
-    for ability, scores in ability_scores.items():
-        ability_scores_array.append({"ability": ability, **scores})
+    if MODEL_ID not in overall_report:
+        return jsonify({"error": f"Model ID '{MODEL_ID}' not found in the report", "code": "ModelNotFound"}), 404
+    else:
+        ability_scores = overall_report[MODEL_ID]["score_per_category"]
+        ability_scores_array = []
+        for ability, scores in ability_scores.items():
+            ability_scores_array.append({"ability": ability, **scores})
     
-    scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
-    data_id_scores = []
-    for data_id, scores in scores_per_data_id.items():
-        data_id_scores.append(
-            {"data_id": data_id, "score": scores["correct"], "total": scores["total"], "accuracy": scores["accuracy"]})
-    result = {
-        "request_id": str(request_id),
-        "model_id": MODEL_ID,
-        "score": overall_report[MODEL_ID]["score_total"],
-        "correct": overall_report[MODEL_ID]["total_correct"],
-        "total": overall_report[MODEL_ID]["total_questions"],
-        "ability_scores": ability_scores_array,
-        "data_id_scores": data_id_scores,
-        "model_description": MODEL_DICT.get(MODEL_ID, {}),
-        "report": report
-    }
-    return json.dumps(result, ensure_ascii=False)
+        scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
+        data_id_scores = []
+        for data_id, scores in scores_per_data_id.items():
+            data_id_scores.append(
+                {"data_id": data_id, "score": scores["correct"], "total": scores["total"], "accuracy": scores["accuracy"]})
+        result = {
+            "request_id": str(request_id),
+            "model_id": MODEL_ID,
+            "score": overall_report[MODEL_ID]["score_total"],
+            "correct": overall_report[MODEL_ID]["total_correct"],
+            "total": overall_report[MODEL_ID]["total_questions"],
+            "ability_scores": ability_scores_array,
+            "data_id_scores": data_id_scores,
+            "model_description": MODEL_DICT.get(MODEL_ID, {}),
+            "report": report
+        }
+        return json.dumps(result, ensure_ascii=False)
 
 
 @app.route('/get_datapage_list', methods=['POST'])
@@ -288,6 +291,7 @@ def get_report():
     if evaluation_results is not None:
         data_ids = evaluation_results["data_ids"]
         model_ids = evaluation_results["model_ids"]
+        print(__name__, "data_ids:", data_ids, "model_ids:", model_ids)
         return get_report_by_ids(request_id, data_ids, model_ids)
     else:
         return jsonify({"error": f"No evaluation results found by request_id {request_id}"}), 400
@@ -322,6 +326,10 @@ def run_evaluate():
     cache_dir = os.environ.get('CACHE_DIR', "/root/autodl-tmp/model")
     print("model_names:", model_names, "model_ids:", model_ids, "data_ids:", data_ids, "cache_dir:", cache_dir)
     failed = []
+    if num_gpus_total // num_gpus_per_model > 1:
+        import ray
+        ray.init()
+
     try:
         start_time = get_start_time()
         outputs = []
@@ -332,6 +340,7 @@ def run_evaluate():
                                            f"{model_id}.jsonl")
                 try:
                     run_eval(
+                        ray=ray,
                         model_path=model_name, model_id=model_id, question_file=question_file,
                         question_begin=question_begin, question_end=question_end,
                         answer_file=output_file, max_new_token=max_new_token,
@@ -344,14 +353,13 @@ def run_evaluate():
                     print(e)
                     failed.append({"model_id": model_id, "reason": str(e)})
                     continue
-                temp = {"request_id": request_id, "data_id": data_id,
+                temp = {"data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
                 outputs.append(temp)
         
         end_time = get_end_time()
         result = {
-            "request_id": request_id,
             "outputs": outputs,
             "model_names": model_names,
             "model_ids": model_ids,
