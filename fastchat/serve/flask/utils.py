@@ -47,7 +47,7 @@ def calculate_model_scores(data_id_list):
                                          "scores_per_data_id": defaultdict(lambda: {"correct": 0, "total": 0})}
             for answer in answers:
                 if len(answer["reference_answer"]) > 1:
-                    print("invalid reference answer", answer)
+                    # print("invalid reference answer", answer)
                     continue
                 category = answer["category"].split('|||')[0]
                 predicted = answer["choices"][0]["turns"][0].strip()
