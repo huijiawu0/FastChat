@@ -304,7 +304,6 @@ def is_non_empty_file(file_path):
 
 @app.route('/run_evaluate', methods=['POST'])
 def run_evaluate():
-    global ray
     request_id = random_uuid()
     data = request.json
     model_names = data.get('model_names', None)
@@ -342,8 +341,9 @@ def run_evaluate():
         for data_id in data_ids:
             question_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "question.jsonl")
             for model_name, model_id in zip(model_names, model_ids):
+                model_name_saved = model_name.split('/')[-1]
                 output_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "model_answer",
-                                           f"{model_id}.jsonl")
+                                           f"{model_name_saved}.jsonl")
                 
                 if is_non_empty_file(output_file):
                     print(
