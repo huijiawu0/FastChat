@@ -51,8 +51,8 @@ def calculate_model_scores(data_id_list):
                     continue
                 category = answer["category"].split('|||')[0]
                 predicted = answer["choices"][0]["turns"][0].strip()
-                predicted_counts = {option: predicted.count(option) for option in ['A', 'B', 'C', 'D']}
-                reference_counts = {option: answer["reference_answer"].count(option) for option in ['A', 'B', 'C', 'D']}
+                predicted_counts = {option: option in predicted for option in ['A', 'B', 'C', 'D']}
+                reference_counts = {option: option in answer["reference_answer"] for option in ['A', 'B', 'C', 'D']}
                 is_correct = all(predicted_counts[opt] == reference_counts[opt] for opt in ['A', 'B', 'C', 'D'])
                 
                 if not is_correct:
