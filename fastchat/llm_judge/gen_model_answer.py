@@ -121,11 +121,11 @@ def get_model_answers(
         conv.append_message(conv.roles[1], None)
         prompt = conv.get_prompt()
         prompts.append(prompt)
-        print(prompt)
+        # print(prompt)
 
-    sampling_params = SamplingParams(temperature=0.7)
+    sampling_params = SamplingParams(temperature=0.0)
     outputs = llm.generate(prompts, sampling_params)
-    print("len of prompts: ", len(prompts), len(outputs))
+    # print("len of prompts: ", len(prompts), len(outputs))
     for idx, (question, output) in enumerate(zip(questions, outputs)):
         prompt = output.prompt
         qs = '\n'.join(question["turns"])
