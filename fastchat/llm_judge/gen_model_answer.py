@@ -103,13 +103,15 @@ def get_model_answers(
     # llm = LLM(model=model_dir, trust_remote_code=True)
     try:
         llm = LLM(model=model_dir, trust_remote_code=True)
-    except ModuleNotFoundError as e:
+    except (ModuleNotFoundError, AttributeError) as e:
         print(e)
         destroy_model_parallel()
-        del llm
+        if 'llm' in locals():
+            del llm
         gc.collect()
         torch.cuda.empty_cache()
         return None
+    
     prompts = []
 
     for question in tqdm(questions):
