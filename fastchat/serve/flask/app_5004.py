@@ -143,12 +143,13 @@ def get_modelpage_detail():
         ability_scores_array = []
         for ability, scores in ability_scores.items():
             ability_scores_array.append({"ability": ability, **scores})
-    
+        
         scores_per_data_id = overall_report[MODEL_ID]["scores_per_data_id"]
         data_id_scores = []
         for data_id, scores in scores_per_data_id.items():
             data_id_scores.append(
-                {"data_id": data_id, "score": scores["correct"], "total": scores["total"], "accuracy": scores["accuracy"]})
+                {"data_id": data_id, "score": scores["correct"], "total": scores["total"],
+                 "accuracy": scores["accuracy"]})
         result = {
             "request_id": str(request_id),
             "model_id": MODEL_ID,
@@ -235,7 +236,7 @@ def get_leaderboard_detail():
                          (not model_sizes or model['参数量'] in model_sizes)]
     if datasets is not None:
         filtered_data = [model for model in all_data if
-                            (not datasets or model['数据集'] in filtered_data)]
+                         (not datasets or model['数据集'] in filtered_data)]
     aggregated_scores = {}
     for model in filtered_data:
         model_name = model['模型']
@@ -250,7 +251,7 @@ def get_leaderboard_detail():
             aggregated_scores[model_name][category] += model[category]
         
         aggregated_scores[model_name]['count'] += 1
-
+    
     final_data = []
     for model_name, scores in aggregated_scores.items():
         avg_scores = {cat: scores[cat] / scores['count'] for cat in categories}
@@ -262,12 +263,12 @@ def get_leaderboard_detail():
             "综合": sum(avg_scores.values()) / len(categories),
             **avg_scores
         })
-
+    
     result = {
         "request_id": str(uuid.uuid4()),
         "header": [
-            "模型", "发布日期", "类型", "参数量", "综合"
-        ] + selected_header,
+                      "模型", "发布日期", "类型", "参数量", "综合"
+                  ] + selected_header,
         "data": final_data
     }
     return json.dumps(result, ensure_ascii=False)
@@ -323,7 +324,7 @@ def run_evaluate():
     if len(model_names) != len(model_ids):
         print(model_names, model_ids)
         return jsonify({"error": "model_names and model_ids should have the same length"}), 400
-
+    
     revision = data.get('revision', None)
     question_begin = data.get('question_begin', None)
     question_end = data.get('question_end', None)
@@ -339,7 +340,7 @@ def run_evaluate():
     if num_gpus_total // num_gpus_per_model > 1:
         import ray
         ray.init()
-
+    
     try:
         start_time = get_start_time()
         outputs = []
