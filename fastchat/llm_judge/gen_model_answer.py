@@ -140,6 +140,8 @@ def get_model_answers(
                 "reference_answer": question["reference_answer"],
                 "question_type": question["question_type"],
                 "category": question['category'],
+                "field": question['field'],
+                "law": question['law'],
                 "prompt": prompt,
                 "question": qs,
                 "tstamp": time.time(),
