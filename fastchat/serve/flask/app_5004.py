@@ -346,22 +346,22 @@ def run_evaluate():
                 if is_non_empty_file(output_file):
                     print(
                         f"Skipping model_id {model_id} for data_id {data_id} as output file already exists and is non-empty.")
-                    continue
-                try:
-                    run_eval(
-                        ray=ray,
-                        model_path=model_name, model_id=model_id, question_file=question_file,
-                        question_begin=question_begin, question_end=question_end,
-                        answer_file=output_file, max_new_token=max_new_token,
-                        num_choices=num_choices, num_gpus_per_model=num_gpus_per_model,
-                        num_gpus_total=num_gpus_total, max_gpu_memory=max_gpu_memory,
-                        dtype=dtype, revision=revision, cache_dir=cache_dir
-                    )
-                except AttributeError as e:
-                    print("eval model error:", model_name, model_id)
-                    print(e)
-                    failed.append({"model_id": model_id, "reason": str(e)})
-                    continue
+                else:
+                    try:
+                        run_eval(
+                            ray=ray,
+                            model_path=model_name, model_id=model_id, question_file=question_file,
+                            question_begin=question_begin, question_end=question_end,
+                            answer_file=output_file, max_new_token=max_new_token,
+                            num_choices=num_choices, num_gpus_per_model=num_gpus_per_model,
+                            num_gpus_total=num_gpus_total, max_gpu_memory=max_gpu_memory,
+                            dtype=dtype, revision=revision, cache_dir=cache_dir
+                        )
+                    except AttributeError as e:
+                        print("eval model error:", model_name, model_id)
+                        print(e)
+                        failed.append({"model_id": model_id, "reason": str(e)})
+                        continue
                 temp = {"data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
