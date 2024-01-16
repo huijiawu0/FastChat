@@ -132,9 +132,8 @@ def calculate_model_scores2(bench_name):
             
             if field not in report_per_data:
                 report_per_data[field] = {}
-            else:
-                if model not in report_per_data[field]:
-                    report_per_data[field][model] = {"total_correct": 0, "total_questions": 0}
+            if model not in report_per_data[field]:
+                report_per_data[field][model] = {"total_correct": 0, "total_questions": 0}
             report_per_data[field][model]["total_correct"] += is_correct
             report_per_data[field][model]["total_questions"] += 1
 
