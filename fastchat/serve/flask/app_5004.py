@@ -348,14 +348,13 @@ def run_evaluate():
                     print(e)
                     failed.append({"model_id": model_id, "reason": str(e)})
                     continue
-                temp = {"request_id": request_id, "data_id": data_id,
+                temp = {"data_id": data_id,
                         "model_id": model_id, "model_name": model_name,
                         "output": output_file}
                 outputs.append(temp)
         
         end_time = get_end_time()
         result = {
-            "request_id": request_id,
             "outputs": outputs,
             "model_names": model_names,
             "model_ids": model_ids,
