@@ -165,7 +165,7 @@ def get_modelpage_detail():
         ability_scores_array = []
         for ability, scores in ability_scores.items():
             ability_scores_array.append({"ability": ability, **scores})
-        
+  
         scores_per_data_id = report_per_model[MODEL_NAME]["scores_per_data_id"]
         data_id_scores = []
         for data_id, scores in scores_per_data_id.items():
@@ -202,9 +202,6 @@ def get_datapage_detail():
         return jsonify({"error": "Missing required fields in the request"}), 400
     DATA_ID = data.get('data_id')
     DATA_RENAME = RENAME_DATA.get(DATA_ID, None)
-    if DATA_RENAME is None:
-        return jsonify({"error": f"Data ID '{DATA_ID}' not found in the report", "code": "DataNotFound"}), 404
-    # DATA_ID = "moral_bench_test1"
     report_per_model, report_per_data = calculate_model_scores2("moral_bench_test5")
     
     result = {
@@ -228,34 +225,8 @@ def get_leaderboard_detail():
     datasets = filter_params.get('datasets', None)
     print("categories:", categories, "model_sizes:", model_sizes, "datasets:", datasets)
     selected_header = [cate for cate in CATEGORY if cate in categories]
-    all_data = [
-        {
-            "模型": "ChatGLM2",
-            "发布日期": "2023-01-01",
-            "类型": "大语言模型",
-            "参数量": "6B",
-            "数据集": "economic_ethics_dataset",
-            "综合": 85.25,
-            "合规性": 92.00,
-            "公平性": 87.75,
-            "知识产权": 88.50,
-            "隐私保护": 84.25,
-            "可信度": 89.00
-        },
-        {
-            "模型": "ChatGLM3",
-            "发布日期": "2023-02-15",
-            "类型": "大语言模型",
-            "数据集": "cultural_ethics_dataset",
-            "参数量": "7B",
-            "综合": 78.50,
-            "合规性": 80.00,
-            "公平性": 75.25,
-            "知识产权": 82.75,
-            "隐私保护": 79.25,
-            "可信度": 77.00
-        }
-    ]
+    all_data = []
+    
     filtered_data = all_data.copy()
     if model_sizes is not None:
         filtered_data = [model for model in all_data if
