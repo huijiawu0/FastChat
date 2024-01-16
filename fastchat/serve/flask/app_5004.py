@@ -304,6 +304,7 @@ def is_non_empty_file(file_path):
 
 @app.route('/run_evaluate', methods=['POST'])
 def run_evaluate():
+    global ray
     request_id = random_uuid()
     data = request.json
     model_names = data.get('model_names', None)
