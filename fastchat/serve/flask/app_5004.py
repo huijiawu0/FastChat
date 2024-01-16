@@ -74,7 +74,8 @@ def get_total_scores(model_scores):
 
 def get_report_by_ids(request_id, data_ids, model_ids):
     report = calculate_model_scores(data_ids)
-    header = ['Model ID', 'Total Score'] + data_ids + ["Evaluate Time", "Report"]
+    categories = ['合规性', '公平性', '知识产权', '隐私保护', '可信度']
+    header = ['Model ID', 'Total Score'] + categories + ["Evaluate Time", "Report"]
     leaderboard = [header]
     for model, model_data in report.items():
         if model not in model_ids:
@@ -86,10 +87,10 @@ def get_report_by_ids(request_id, data_ids, model_ids):
             total_questions = model_data['total_questions']
             total_score = total_correct / total_questions if total_questions > 0 else 0
             row.append(total_score)
-            for data_id in data_ids:
-                score_per_data_id = model_data['scores_per_data_id'].get(data_id, {"correct": 0, "total": 0})
-                category_score = score_per_data_id['correct'] / score_per_data_id['total'] \
-                    if score_per_data_id['total'] > 0 else 0
+            for category in categories:
+                score_per_category_id = model_data['score_per_category'].get(category, {"correct": 0, "total": 0})
+                category_score = score_per_category_id['correct'] / score_per_category_id['total'] \
+                    if score_per_category_id['total'] > 0 else 0
                 row.append(category_score)
             # report = get_cache()
             report = ""
