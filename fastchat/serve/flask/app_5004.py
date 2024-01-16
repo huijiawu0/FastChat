@@ -347,7 +347,7 @@ def run_evaluate():
             question_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "question.jsonl")
             for model_name, model_id in zip(model_names, model_ids):
                 model_name_saved = model_name.split('/')[-1]
-                output_file = os.path.join(BASE_PATH, "llm_judge", "data", str(data_id), "model_answer",
+                output_file = os.path.join("llm_judge", "data", str(data_id), "model_answer",
                                            f"{model_name_saved}.jsonl")
                 
                 if is_non_empty_file(output_file):
