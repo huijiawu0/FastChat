@@ -326,6 +326,9 @@ def run_evaluate():
     cache_dir = os.environ.get('CACHE_DIR', "/root/autodl-tmp/model")
     print("model_names:", model_names, "model_ids:", model_ids, "data_ids:", data_ids, "cache_dir:", cache_dir)
     failed = []
+    if num_gpus_total // num_gpus_per_model > 1:
+        import ray
+        ray.init()
     try:
         start_time = get_start_time()
         outputs = []
