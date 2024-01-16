@@ -49,6 +49,8 @@ def run_eval(
     use_ray = num_gpus_total // num_gpus_per_model > 1
 
     if use_ray:
+        import ray
+        ray.init()
         get_answers_func = ray.remote(num_gpus=num_gpus_per_model)(
             get_model_answers
         ).remote
