@@ -159,7 +159,7 @@
         {
             "model_id": "openchat_3.5",
             "name": "myxiongmodel/openchat_3.5",
-            "promulgator": "",
+            "promulgator": "imoneoi",
             "date": "2023年11月01日",
             "country": "国外",
             "parameters_size": "7B",
