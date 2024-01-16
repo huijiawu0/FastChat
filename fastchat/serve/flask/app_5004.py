@@ -34,7 +34,7 @@ DATA_IDS = [dataset["data_id"] for dataset in DATA_JSON[0]["datasets"]]
 MODEL_PATH = os.path.join(app_dir, 'resources', 'model_config.json')
 with open(MODEL_PATH) as file:
     MODEL_JSON = json.load(file)
-MODEL_DICT = {model["model_name"]: model for model in MODEL_JSON["models"]}
+MODEL_DICT = {model["name"]: model for model in MODEL_JSON["models"]}
 MODEL_NAMES = [model['name'] for model in MODEL_JSON["models"]]
 MODEL_IDS = [model['model_id'] for model in MODEL_JSON["models"]]
 BASE_PATH = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
