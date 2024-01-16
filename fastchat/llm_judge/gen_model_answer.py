@@ -24,6 +24,7 @@ from modelscope import GenerationConfig
 
 
 def run_eval(
+        ray: object,
         model_path: object,
         model_id: object,
         question_file: object,
@@ -48,9 +49,7 @@ def run_eval(
 
     use_ray = num_gpus_total // num_gpus_per_model > 1
 
-    if use_ray:
-        import ray
-        ray.init()
+    if use_ray and ray is not None:
         get_answers_func = ray.remote(num_gpus=num_gpus_per_model)(
             get_model_answers
         ).remote
