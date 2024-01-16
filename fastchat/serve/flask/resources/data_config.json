@@ -744,7 +744,7 @@
                 "description": "The WMT 2014 benchmark for machine translation.",
                 "detail": "WMT 2014是用于第九届统计机器翻译研讨会共享任务的数据集合集。该研讨会设有四项任务：\n\n1. 新闻翻译任务，\n2. 质量评估任务，\n3. 指标任务，\n4. 医学文本翻译任务。",
                 "citation": "\n@InProceedings{bojar-EtAl:2014:W14-33,\n  author    = {Bojar, Ondrej  and  Buck, Christian  and  Federmann, Christian  and  Haddow, Barry  and  Koehn, Philipp  and  Leveling, Johannes  and  Monz, Christof  and  Pecina, Pavel  and  Post, Matt  and  Saint-Amand, Herve  and  Soricut, Radu  and  Specia, Lucia  and  Tamchyna, Ale\n{s}},\n  title     = {Findings of the 2014 Workshop on Statistical Machine Translation},\n  booktitle = {Proceedings of the Ninth Workshop on Statistical Machine Translation},\n  month     = {June},\n  year      = {2014},\n  address   = {Baltimore, Maryland, USA},\n  publisher = {Association for Computational Linguistics},\n  pages     = {12--58},\n  url       = {http://www.aclweb.org/anthology/W/W14/W14-3302}\n}\n",
-                "example": { "cs": "Následný postup na základě usnesení Parlamentu: viz zápis", "en": "Action taken on Parliament's resolutions: see Minutes" }],
+                "example": { "cs": "Následný postup na základě usnesení Parlamentu: viz zápis", "en": "Action taken on Parliament's resolutions: see Minutes" },
                 "promulgator": "Ondřej Bojar et al.",
                 "url": "https://huggingface.co/datasets/wmt14",
                 "category": "基础能力"
