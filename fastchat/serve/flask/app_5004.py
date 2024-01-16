@@ -242,7 +242,8 @@ def get_leaderboard_detail():
         filtered_cates = [cate for cate in CATEGORY if cate in categories]
     filtered_models = [model["name"].split('/')[-1] for model in MODEL_JSON["models"]]
     if model_sizes is not None:
-        filtered_models = [model for model in filtered_models if model in model_sizes]
+        filtered_models = [model for model in filtered_models if
+                           any(size.lower() in model.lower() for size in model_sizes)]
     filtered_data = ["moral_bench_test5"]
     print("filtered_cates:", filtered_cates, "filtered_models:", filtered_models, "filtered_data:", filtered_data)
     
