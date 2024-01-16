@@ -263,7 +263,7 @@ def get_leaderboard_detail():
                 aggregated_scores[model_name][category] = category_score.get('accuracy', 0)
 
             aggregated_scores[model_name]['count'] = model_data['total_questions']
-
+            
     print("aggregated_scores:", aggregated_scores)
 
     final_data = []
@@ -272,6 +272,10 @@ def get_leaderboard_detail():
             avg_scores = {cat: scores[cat] for cat in categories}
             final_data.append({
                 "模型": model_name,
+                "发布日期": MODEL_DICT.get(model_name, {}).get('date', ''),
+                "发布者": MODEL_DICT.get(model_name, {}).get('promulgator', ''),
+                "国内/国外模型": MODEL_DICT.get(model_name, {}).get('country', ''),
+                "参数量": MODEL_DICT.get(model_name, {}).get('parameters_size', ''),
                 "综合": sum(avg_scores.values()) / len(categories),
                 **avg_scores
             })
@@ -279,7 +283,7 @@ def get_leaderboard_detail():
     result = {
         "request_id": str(uuid.uuid4()),
         "header": [
-                      "模型", "综合"
+                      "模型", "发布者", "发布日期", "国内/国外模型", "参数量", "综合"
                   ] + categories,
         "data": final_data
     }
