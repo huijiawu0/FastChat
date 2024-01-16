@@ -23,9 +23,12 @@ from fastchat.llm_judge.report.assist1 import generate_report, get_system_prompt
 
 app_dir = os.path.abspath(os.path.dirname(__file__))
 DATA_PATH = os.path.join(app_dir, 'resources', 'data_config.json')
-with open(DATA_PATH) as file:
+with open(DATA_PATH, 'r', encoding='utf-8') as file:
     DATA_JSON = json.load(file)
-DATA_DICT = {dataset["data_id"]: dataset for dataset in DATA_JSON[0]["datasets"]}
+DATA_DICT = {}
+for DATA_CATEGORY in DATA_JSON:
+    for DATA in DATA_CATEGORY['datasets']:
+        DATA_DICT[DATA['data_id']] = DATA
 DATA_IDS = [dataset["data_id"] for dataset in DATA_JSON[0]["datasets"]]
 MODEL_PATH = os.path.join(app_dir, 'resources', 'model_config.json')
 with open(MODEL_PATH) as file:
