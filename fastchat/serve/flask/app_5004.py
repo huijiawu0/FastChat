@@ -349,6 +349,7 @@ def run_evaluate():
                     print(
                         f"Skipping model_id {model_id} for data_id {data_id} as output file already exists and is non-empty.")
                 else:
+                    print("eval model:", model_name, model_id)
                     try:
                         run_eval(
                             ray=ray,
