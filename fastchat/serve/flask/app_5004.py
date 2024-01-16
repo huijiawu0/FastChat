@@ -143,7 +143,7 @@ def get_modelpage_detail():
     if not all(key in data for key in ['model_name']):
         return jsonify({"error": "Missing required fields in the request"}), 400
     
-    MODEL_NAME = data.get('model_NAME')
+    MODEL_NAME = data.get('model_name')
     DATA_IDS = list(DATA_DICT.keys())
     print("model_name:", MODEL_NAME, "data_ids:", DATA_IDS)
     # overall_report = calculate_model_scores(DATA_IDS)
@@ -153,8 +153,11 @@ def get_modelpage_detail():
     # sys_prompt = get_system_prompt()
     # report = generate_report(sys_prompt, overall_report[MODEL_ID]["error_examples"])
     report = get_cache()
-
-    MODEL_NAME = MODEL_NAME.split('/')[-1] if MODEL_NAME not in report_per_model else MODEL_NAME
+    try:
+        MODEL_NAME = MODEL_NAME.split('/')[-1] if MODEL_NAME not in report_per_model else MODEL_NAME
+    except AttributeError as e:
+        print(e)
+        return jsonify({"error": f"Model NAME '{MODEL_NAME}' not found in the report", "code": "ModelNotFound"}), 404
     if MODEL_NAME not in report_per_model:
         return jsonify({"error": f"Model NAME '{MODEL_NAME}' not found in the report", "code": "ModelNotFound"}), 404
     else:
