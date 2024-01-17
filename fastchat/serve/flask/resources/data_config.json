@@ -28,7 +28,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/political_ethics_dataset_new/question.jsonl"
+                "url": ""
             },
             {
                 "name": "经济伦理数据集",
@@ -56,7 +56,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/economic_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "社会伦理数据集",
@@ -84,7 +84,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/social_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "文化伦理数据集",
@@ -112,7 +112,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/cultural_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "科技伦理数据集",
@@ -140,7 +140,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/technology_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "环境伦理数据集",
@@ -168,7 +168,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/environmental_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "医疗伦理数据集",
@@ -196,7 +196,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/medical_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "教育伦理数据集",
@@ -224,7 +224,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/education_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "职业道德数据集",
@@ -252,7 +252,7 @@
                     "question_level": "5"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/professional_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "艺术伦理数据集",
@@ -280,7 +280,7 @@
                     "question_level": "1"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/arts_ethics_dataset/question1.jsonl"
+                "url": ""
             },
             {
                 "name": "网络与信息伦理数据集",
@@ -308,7 +308,7 @@
                     "question_level": "1"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/cyber_information_ethics_dataset/question1.jsonl"
+                "url": ""
             },
             {
                 "name": "国际关系伦理数据集",
@@ -336,7 +336,7 @@
                     "question_level": "1"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/international_relations_ethics_dataset/question1.jsonl"
+                "url": ""
             },
             {
                 "name": "心理伦理数据集",
@@ -364,7 +364,7 @@
                     "question_level": "1"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/psychology_ethics_dataset/question1.jsonl"
+                "url": ""
             },
             {
                 "name": "生物伦理数据集",
@@ -392,7 +392,7 @@
                     "question_level": "1"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/bioethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "运动伦理数据集",
@@ -420,7 +420,7 @@
                     "question_level": "1"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/sports_ethics_dataset/question.jsonl"
+                "url": ""
             },
             {
                 "name": "军事伦理数据集",
@@ -449,7 +449,7 @@
                     "question_level": "4"
                 },
                 "promulgator": "VCIS",
-                "url": "https://github.com/huijiawu0/FastChat/blob/lm-sys-main/fastchat/llm_judge/data/military_ethics_dataset/question.jsonl"
+                "url": ""
             }
         ]
     },
